@@ -2,18 +2,41 @@ package co.texerp.integrations.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 import java.time.Instant;
 
 @Entity
+@Table(
+        name = "app_user",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_app_user_username",
+                        columnNames = "username"
+                ),
+                @UniqueConstraint(
+                        name = "uk_app_user_email",
+                        columnNames = "email"
+                )
+        }
+)
 public class AppUser extends BaseEntity {
 
     @NotBlank
+    @Column(nullable = false)
     public String name;
 
+    @Column(
+            name = "username",
+            nullable = false
+    )
+    public String username;
+
     @Email
-    @Column(unique = true, nullable = false)
+    @NotBlank
+    @Column(nullable = false)
     public String email;
 
     @JsonIgnore
@@ -25,6 +48,7 @@ public class AppUser extends BaseEntity {
     @Column(nullable = false)
     public Role role;
 
+    @Column(nullable = false)
     public boolean active = true;
 
     @Column(name = "last_login_at")
@@ -32,6 +56,10 @@ public class AppUser extends BaseEntity {
 
     public String getName() {
         return name;
+    }
+
+    public String getUsername() {
+        return username;
     }
 
     public String getEmail() {

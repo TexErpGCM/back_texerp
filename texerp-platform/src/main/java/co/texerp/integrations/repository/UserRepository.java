@@ -1,25 +1,30 @@
 package co.texerp.integrations.repository;
 
 
-
 import co.texerp.integrations.domain.AppUser;
 import co.texerp.integrations.domain.Role;
 import org.springframework.data.domain.Page;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import org.springframework.data.domain.Pageable;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
-public interface UserRepository extends StatementRepository<AppUser> {
+public interface UserRepository extends JpaRepository<AppUser, Long>, JpaSpecificationExecutor<AppUser> {
 
     interface UserAggregate {
         Long getTotal();
+
         Long getActive();
+
         Long getAdministrators();
+
         Long getAnalysts();
     }
 
@@ -39,12 +44,12 @@ public interface UserRepository extends StatementRepository<AppUser> {
             order by u.name, u.id
             """,
             countQuery = """
-            select count(u)
-            from AppUser u
-            where (:search = ''
-                   or lower(u.name) like lower(concat('%', :search, '%'))
-                   or lower(u.email) like lower(concat('%', :search, '%')))
-            """)
+                    select count(u)
+                    from AppUser u
+                    where (:search = ''
+                           or lower(u.name) like lower(concat('%', :search, '%'))
+                           or lower(u.email) like lower(concat('%', :search, '%')))
+                    """)
     Page<AppUser> selectPage(@Param("search") String search, Pageable pageable);
 
     @Query("""
@@ -106,4 +111,18 @@ public interface UserRepository extends StatementRepository<AppUser> {
             where u.id = :id
             """)
     int deleteByIdStatement(@Param("id") Long id);
+
+    boolean existsByUsernameIgnoreCase(String username);
+
+    boolean existsByEmailIgnoreCase(String email);
+
+    boolean existsByUsernameIgnoreCaseAndIdNot(
+            String username,
+            Long id
+    );
+
+    boolean existsByEmailIgnoreCaseAndIdNot(
+            String email,
+            Long id
+    );
 }
