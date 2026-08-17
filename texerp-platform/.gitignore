@@ -1,0 +1,148 @@
+# =========================
+# MAVEN
+# =========================
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+
+# =========================
+# GRADLE
+# =========================
+.gradle/
+build/
+
+# =========================
+# INTELLIJ IDEA
+# =========================
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# =========================
+# ECLIPSE
+# =========================
+.classpath
+.project
+.settings/
+bin/
+
+# =========================
+# VISUAL STUDIO CODE
+# =========================
+.vscode/
+
+# =========================
+# ARCHIVOS COMPILADOS
+# =========================
+*.class
+*.jar
+*.war
+*.ear
+
+# Maven Wrapper
+!/.mvn/wrapper/maven-wrapper.jar
+
+# Gradle Wrapper
+!gradle/wrapper/gradle-wrapper.jar
+
+# =========================
+# BASE DE DATOS LOCAL
+# =========================
+data/
+*.mv.db
+*.trace.db
+
+# =========================
+# LOGS
+# =========================
+*.log
+logs/
+spring-shell.log
+
+# =========================
+# ARCHIVOS TEMPORALES
+# =========================
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# =========================
+# VARIABLES DE ENTORNO
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# CONFIGURACIÓN LOCAL
+# =========================
+application-local.properties
+application-local.yml
+application-local.yaml
+
+application-dev.properties
+application-dev.yml
+application-dev.yaml
+
+# =========================
+# COBERTURA DE PRUEBAS
+# =========================
+coverage/
+jacoco.exec
+site/jacoco/
+
+# =========================
+# SONARQUBE
+# =========================
+.sonar/
+.scannerwork/
+
+# =========================
+# SISTEMA OPERATIVO
+# =========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =========================
+# ARCHIVOS GENERADOS
+# =========================
+generated/
+generated-sources/
+
+# =========================
+# JVM
+# =========================
+*.hprof
+hs_err_pid*
+replay_pid*
+
+# =========================
+# LOMBOK
+# =========================
+.lombok/
+
+# =========================
+# DOCKER LOCAL
+# =========================
+docker-compose.override.yml
+
+# =========================
+# CLAVES Y CERTIFICADOS
+# =========================
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
