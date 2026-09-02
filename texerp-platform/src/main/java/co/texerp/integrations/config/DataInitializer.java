@@ -30,6 +30,13 @@ public class DataInitializer {
     @Value("${app.seed.analyst-password}")
     private String analystPassword;
 
+    @Value("${app.seed.seller-name}")
+    private String sellerName;
+    @Value("${app.seed.seller-email}")
+    private String sellerEmail;
+    @Value("${app.seed.seller-password}")
+    private String sellerPassword;
+
     @Bean
     CommandLineRunner seed(UserRepository users, PasswordEncoder encoder) {
         return args -> initialize(users, encoder);
@@ -39,6 +46,7 @@ public class DataInitializer {
     void initialize(UserRepository users, PasswordEncoder encoder) {
         createUserIfMissing(users, encoder, adminName, adminEmail, adminPassword, Role.ADMINISTRADOR);
         createUserIfMissing(users, encoder, analystName, analystEmail, analystPassword, Role.ANALISTA);
+        createUserIfMissing(users, encoder, sellerName, sellerEmail, sellerPassword, Role.VENDEDOR);
     }
 
     private void createUserIfMissing(
