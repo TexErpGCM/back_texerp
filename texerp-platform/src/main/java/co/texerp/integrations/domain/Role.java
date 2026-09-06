@@ -21,7 +21,12 @@ public enum Role {
             Set.of(
                     Permission.DASHBOARD_READ
             )
-    );
+    ),
+
+    VENDEDOR(
+            Set.of(
+                    Permission.DASHBOARD_READ
+    ));
 
     private final Set<Permission> permissions;
 

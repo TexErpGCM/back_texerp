@@ -372,6 +372,22 @@ public class UserController {
                 )
         );
     }
+
+    @DeleteMapping("/{id}")
+    @Transactional
+    public ResponseEntity<ApiResponse<Void>> delete(
+            @PathVariable Long id
+    ) {
+        users.deleteById(id);
+
+        return ResponseEntity.ok(
+                ApiResponse.ok(
+                        "Usuario eliminado correctamente",
+                        null
+                )
+        );
+    }
+
     public record CreateUserRequest(
 
             @NotBlank(
