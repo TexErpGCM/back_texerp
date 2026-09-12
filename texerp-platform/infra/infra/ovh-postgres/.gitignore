@@ -1,0 +1,6 @@
+.env
+*.key
+*.crt
+*.csr
+*.srl
+client-bundles/

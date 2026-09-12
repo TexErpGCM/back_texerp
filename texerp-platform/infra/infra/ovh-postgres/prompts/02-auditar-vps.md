@@ -1,0 +1,3 @@
+# Prompt: auditar el VPS sin modificarlo
+
+Usa `$ovh-postgres-vps` en modo de auditoria de solo lectura. Toma la conexion de `texerp-platform/infra/ovh-postgres/.env` sin revelar secretos. Verifica identidad y sistema operativo, estado y version de PostgreSQL, interfaces y puerto de escucha, TLS y su certificado, `password_encryption`, reglas HBA efectivas, atributos del rol de aplicacion, UFW, servicios expuestos y logs recientes. No instales, reinicies ni cambies nada. Entrega hallazgos por severidad, evidencia sin datos sensibles y comandos concretos de remediacion que todavia no debes ejecutar.

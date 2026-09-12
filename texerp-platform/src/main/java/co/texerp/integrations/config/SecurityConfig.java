@@ -51,14 +51,6 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
 
                 // =========================
-                // HEADERS
-                // =========================
-                // Necesario para H2 Console
-                .headers(headers ->
-                        headers.frameOptions(frame -> frame.sameOrigin())
-                )
-
-                // =========================
                 // CORS
                 // =========================
                 .cors(cors ->
@@ -93,15 +85,6 @@ public class SecurityConfig {
                         // =========================
                         .requestMatchers(
                                 "/api/v1/public/**"
-                        )
-                        .permitAll()
-
-                        // =========================
-                        // H2 CONSOLE
-                        // SOLO DESARROLLO
-                        // =========================
-                        .requestMatchers(
-                                "/h2-console/**"
                         )
                         .permitAll()
 
