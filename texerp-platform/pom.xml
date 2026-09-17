@@ -75,10 +75,14 @@
 			<scope>runtime</scope>
 		</dependency>
 
-		<!-- Esquema versionado; Hibernate solo lo valida al iniciar. -->
+		<!-- Esquema versionado; Hibernate solo lo valida al iniciar.
+		     spring-boot-starter-flyway trae el modulo de autoconfiguracion
+		     (spring-boot-flyway) que registra FlywayAutoConfiguration; sin el,
+		     flyway-core queda en el classpath pero Spring Boot 4.x nunca lo
+		     ejecuta (no hay error ni log, simplemente no migra). -->
 		<dependency>
-			<groupId>org.flywaydb</groupId>
-			<artifactId>flyway-core</artifactId>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-flyway</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.flywaydb</groupId>
