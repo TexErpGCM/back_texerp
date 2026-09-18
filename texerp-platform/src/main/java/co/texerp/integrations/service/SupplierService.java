@@ -174,7 +174,6 @@ public class SupplierService {
     private void apply(Supplier supplier, SupplierRequest request, String taxId) {
         supplier.taxId = taxId;
         supplier.name = normalizeRequired(request.name());
-        supplier.phone = normalizeRequired(request.phone());
         supplier.email = normalizeEmail(request.email());
     }
 

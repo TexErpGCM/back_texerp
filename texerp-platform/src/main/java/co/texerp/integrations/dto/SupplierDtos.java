@@ -24,10 +24,6 @@ public final class SupplierDtos {
             @Size(max = 150, message = "El nombre debe tener máximo 150 caracteres")
             String name,
 
-            @NotBlank(message = "El teléfono es obligatorio")
-            @Size(max = 30, message = "El teléfono debe tener máximo 30 caracteres")
-            String phone,
-
             @NotBlank(message = "El correo electrónico es obligatorio")
             @Email(message = "El correo electrónico no tiene un formato válido")
             @Size(max = 150, message = "El correo electrónico debe tener máximo 150 caracteres")

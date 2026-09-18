@@ -7,8 +7,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Optional;
+
 public interface ProductVariantRepository extends JpaRepository<ProductVariant, Long> {
     boolean existsBySkuIgnoreCase(String sku);
+    Optional<ProductVariant> findBySkuIgnoreCase(String sku);
     boolean existsBySkuIgnoreCaseAndIdNot(String sku, Long id);
 
     @Query(value = """
