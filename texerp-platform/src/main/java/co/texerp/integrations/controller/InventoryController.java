@@ -32,12 +32,31 @@ public class InventoryController {
             @RequestParam(defaultValue = "") String product,
             @RequestParam(defaultValue = "") String warehouse,
             @RequestParam(defaultValue = "") String status,
+            @RequestParam(defaultValue = "false") boolean lowStock,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
         return ApiResponse.ok(
                 "Inventario consultado correctamente",
-                service.search(sku, product, warehouse, status, page, size)
+                service.search(sku, product, warehouse, status, lowStock, page, size)
+        );
+    }
+
+    /**
+     * Vista específica para abastecimiento. Devuelve únicamente balances cuyo
+     * disponible es menor o igual al mínimo, incluyendo existencias en cero.
+     * El orden por bodega permite agrupar fácilmente los resultados.
+     */
+    @GetMapping("/low-stock")
+    public ApiResponse<InventoryPage> findLowStock(
+            @RequestParam(defaultValue = "") String product,
+            @RequestParam(defaultValue = "") String warehouse,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return ApiResponse.ok(
+                "Variantes con inventario bajo consultadas correctamente",
+                service.findLowStock(product, warehouse, page, size)
         );
     }
 

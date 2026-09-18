@@ -115,6 +115,9 @@ public class InventoryMovement extends BaseEntity {
         if (type == InventoryMovementType.RECEIPT && quantity.signum() <= 0) {
             throw new IllegalArgumentException("Una recepción debe aumentar el saldo disponible");
         }
+        if (type == InventoryMovementType.ADJUSTMENT && (reason == null || reason.isBlank())) {
+            throw new IllegalArgumentException("Todo ajuste de inventario debe conservar un motivo");
+        }
     }
 
     @PreUpdate

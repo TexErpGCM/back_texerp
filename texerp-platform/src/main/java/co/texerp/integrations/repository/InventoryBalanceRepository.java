@@ -31,7 +31,8 @@ public interface InventoryBalanceRepository extends JpaRepository<InventoryBalan
                    or (:status = 'OUT_OF_STOCK' and b.availableQuantity <= 0)
                    or (:status = 'LOW_STOCK' and b.availableQuantity > 0 and b.availableQuantity <= b.minimumQuantity)
                    or (:status = 'AVAILABLE' and b.availableQuantity > b.minimumQuantity))
-            order by v.sku, w.name, b.id
+              and (:lowStockOnly = false or b.availableQuantity <= b.minimumQuantity)
+            order by w.name, p.name, v.sku, b.id
             """,
             countQuery = """
             select count(b)
@@ -50,12 +51,54 @@ public interface InventoryBalanceRepository extends JpaRepository<InventoryBalan
                    or (:status = 'OUT_OF_STOCK' and b.availableQuantity <= 0)
                    or (:status = 'LOW_STOCK' and b.availableQuantity > 0 and b.availableQuantity <= b.minimumQuantity)
                    or (:status = 'AVAILABLE' and b.availableQuantity > b.minimumQuantity))
+              and (:lowStockOnly = false or b.availableQuantity <= b.minimumQuantity)
             """)
     Page<InventoryBalance> search(
             @Param("sku") String sku,
             @Param("product") String product,
             @Param("warehouse") String warehouse,
             @Param("status") String status,
+            @Param("lowStockOnly") boolean lowStockOnly,
+            Pageable pageable
+    );
+
+    /**
+     * Lista específica para abastecimiento. Incluye agotados siempre que
+     * disponible <= mínimo y queda ordenada por bodega para facilitar
+     * agrupación en la interfaz.
+     */
+    @Query(value = """
+            select b
+            from InventoryBalance b
+            join fetch b.variant v
+            join fetch v.product p
+            join fetch b.warehouse w
+            where b.availableQuantity <= b.minimumQuantity
+              and (:product = ''
+                   or lower(p.code) like lower(concat('%', :product, '%'))
+                   or lower(p.name) like lower(concat('%', :product, '%')))
+              and (:warehouse = ''
+                   or lower(w.code) like lower(concat('%', :warehouse, '%'))
+                   or lower(w.name) like lower(concat('%', :warehouse, '%')))
+            order by w.name, p.name, v.sku, b.id
+            """,
+            countQuery = """
+            select count(b)
+            from InventoryBalance b
+            join b.variant v
+            join v.product p
+            join b.warehouse w
+            where b.availableQuantity <= b.minimumQuantity
+              and (:product = ''
+                   or lower(p.code) like lower(concat('%', :product, '%'))
+                   or lower(p.name) like lower(concat('%', :product, '%')))
+              and (:warehouse = ''
+                   or lower(w.code) like lower(concat('%', :warehouse, '%'))
+                   or lower(w.name) like lower(concat('%', :warehouse, '%')))
+            """)
+    Page<InventoryBalance> findLowStock(
+            @Param("product") String product,
+            @Param("warehouse") String warehouse,
             Pageable pageable
     );
 

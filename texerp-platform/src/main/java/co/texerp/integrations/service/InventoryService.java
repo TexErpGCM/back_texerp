@@ -45,11 +45,11 @@ public class InventoryService {
             String product,
             String warehouse,
             String status,
+            boolean lowStockOnly,
             int page,
             int size
     ) {
-        int safePage = Math.max(page, 0);
-        int safeSize = Math.min(Math.max(size, 1), 100);
+        PageRequest pageable = pageable(page, size);
         String normalizedStatus = normalizeStatus(status);
 
         var result = repository.search(
@@ -57,16 +57,32 @@ public class InventoryService {
                 normalizeFilter(product),
                 normalizeFilter(warehouse),
                 normalizedStatus,
-                PageRequest.of(safePage, safeSize)
+                lowStockOnly,
+                pageable
         );
 
-        return new InventoryPage(
-                result.getContent().stream().map(this::toResponse).toList(),
-                result.getNumber(),
-                result.getSize(),
-                result.getTotalElements(),
-                result.getTotalPages()
+        return toPage(result);
+    }
+
+    /**
+     * Listado dedicado a reposición. La alerta no se persiste: se deriva en
+     * cada consulta con la regla disponible <= mínimo. De esta forma, una
+     * recepción que deje el saldo por encima del mínimo elimina la alerta
+     * automáticamente en la siguiente consulta.
+     */
+    @Transactional(readOnly = true)
+    public InventoryPage findLowStock(
+            String product,
+            String warehouse,
+            int page,
+            int size
+    ) {
+        var result = repository.findLowStock(
+                normalizeFilter(product),
+                normalizeFilter(warehouse),
+                pageable(page, size)
         );
+        return toPage(result);
     }
 
     @Transactional(readOnly = true)
@@ -80,8 +96,8 @@ public class InventoryService {
                 .map(this::toResponse)
                 .toList();
 
-        // CA-3: si la variante existe pero todavía no posee balances, se responde
-        // correctamente con una lista vacía en lugar de generar un error técnico.
+        // Si la variante existe pero todavía no posee balances, se responde
+        // correctamente con una lista vacía en lugar de generar un error.
         return new SkuInventoryResponse(
                 variant.id,
                 variant.sku,
@@ -124,6 +140,22 @@ public class InventoryService {
         return toResponse(saved);
     }
 
+    private InventoryPage toPage(org.springframework.data.domain.Page<InventoryBalance> result) {
+        return new InventoryPage(
+                result.getContent().stream().map(this::toResponse).toList(),
+                result.getNumber(),
+                result.getSize(),
+                result.getTotalElements(),
+                result.getTotalPages()
+        );
+    }
+
+    private PageRequest pageable(int page, int size) {
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 100);
+        return PageRequest.of(safePage, safeSize);
+    }
+
     private ProductVariant findVariant(Long id) {
         return variantRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Variante no encontrada"));
@@ -146,7 +178,7 @@ public class InventoryService {
 
     private InventoryBalanceResponse toResponse(InventoryBalance balance) {
         InventoryStatus status = calculateStatus(balance);
-        boolean lowStock = balance.availableQuantity.compareTo(balance.minimumQuantity) <= 0;
+        boolean lowStock = isLowStock(balance);
 
         return new InventoryBalanceResponse(
                 balance.id,
@@ -167,11 +199,15 @@ public class InventoryService {
         );
     }
 
+    private boolean isLowStock(InventoryBalance balance) {
+        return balance.availableQuantity.compareTo(balance.minimumQuantity) <= 0;
+    }
+
     private InventoryStatus calculateStatus(InventoryBalance balance) {
         if (balance.availableQuantity.compareTo(BigDecimal.ZERO) <= 0) {
             return InventoryStatus.OUT_OF_STOCK;
         }
-        if (balance.availableQuantity.compareTo(balance.minimumQuantity) <= 0) {
+        if (isLowStock(balance)) {
             return InventoryStatus.LOW_STOCK;
         }
         return InventoryStatus.AVAILABLE;

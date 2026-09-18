@@ -38,7 +38,7 @@ public class InventoryBalanceUpdater {
 
     /**
      * Aplica un movimiento confirmado y registra su trazabilidad dentro de la
-     * misma transacción de negocio que confirma la venta, recepción o ajuste.
+     * misma transacción de negocio que confirma una venta o recepción.
      *
      * Propagation.MANDATORY evita confirmar el balance por separado del proceso
      * que originó el movimiento.
@@ -63,6 +63,9 @@ public class InventoryBalanceUpdater {
         if (type == InventoryMovementType.COMPENSATION) {
             throw new IllegalArgumentException("Los movimientos compensatorios deben generarse a partir de un movimiento existente");
         }
+        if (type == InventoryMovementType.ADJUSTMENT) {
+            throw new IllegalArgumentException("Los ajustes manuales deben registrarse mediante el servicio de ajustes para conservar el motivo y la política de inventario negativo");
+        }
 
         validateDocument(sourceDocument);
         BigDecimal safeAvailableDelta = valueOrZero(availableDelta);
@@ -80,7 +83,48 @@ public class InventoryBalanceUpdater {
                 safeReservedDelta,
                 sourceDocument.trim(),
                 null,
-                null
+                null,
+                false
+        );
+    }
+
+    /**
+     * Aplica un ajuste manual con motivo obligatorio. La autorización para
+     * permitir inventario negativo se resuelve en la capa de servicio de ajuste.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public MovementApplicationResult applyInventoryAdjustment(
+            Long variantId,
+            Long warehouseId,
+            BigDecimal quantity,
+            String sourceDocument,
+            String reason,
+            boolean allowNegativeAvailable
+    ) {
+        validateDocument(sourceDocument);
+        if (quantity == null || quantity.signum() == 0) {
+            throw new IllegalArgumentException("La cantidad del ajuste debe ser diferente de cero");
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("El motivo del ajuste es obligatorio");
+        }
+        if (reason.trim().length() > 500) {
+            throw new IllegalArgumentException("El motivo del ajuste no puede superar 500 caracteres");
+        }
+
+        ProductVariant variant = variantService.requireActive(variantId);
+        Warehouse warehouse = warehouseService.requireActive(warehouseId);
+
+        return applyAndTrace(
+                variant,
+                warehouse,
+                InventoryMovementType.ADJUSTMENT,
+                quantity,
+                BigDecimal.ZERO,
+                sourceDocument.trim(),
+                reason.trim(),
+                null,
+                allowNegativeAvailable
         );
     }
 
@@ -116,7 +160,8 @@ public class InventoryBalanceUpdater {
                 original.reservedDelta.negate(),
                 sourceDocument.trim(),
                 reason.trim(),
-                original
+                original,
+                false
         );
     }
 
@@ -128,7 +173,8 @@ public class InventoryBalanceUpdater {
             BigDecimal reservedDelta,
             String sourceDocument,
             String reason,
-            InventoryMovement compensatesMovement
+            InventoryMovement compensatesMovement,
+            boolean allowNegativeAvailable
     ) {
         InventoryBalance balance = balanceRepository.findForUpdate(variant.id, warehouse.id)
                 .orElseGet(() -> createBalance(variant, warehouse));
@@ -138,8 +184,15 @@ public class InventoryBalanceUpdater {
         BigDecimal newAvailable = previousAvailable.add(availableDelta);
         BigDecimal newReserved = previousReserved.add(reservedDelta);
 
-        if (newAvailable.signum() < 0) {
-            throw new BusinessConflictException("El movimiento dejaría el inventario disponible en negativo");
+        if (newAvailable.signum() < 0 && !allowNegativeAvailable) {
+            String operation = type == InventoryMovementType.ADJUSTMENT ? "El ajuste" : "El movimiento";
+            throw new BusinessConflictException(
+                    operation
+                            + " dejaría el inventario disponible en negativo. Saldo disponible: "
+                            + previousAvailable.toPlainString()
+                            + ", variación solicitada: "
+                            + availableDelta.toPlainString()
+            );
         }
         if (newReserved.signum() < 0) {
             throw new BusinessConflictException("El movimiento dejaría el inventario reservado en negativo");
