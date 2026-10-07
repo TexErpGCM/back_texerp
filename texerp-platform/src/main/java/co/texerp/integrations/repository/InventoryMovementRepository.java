@@ -2,9 +2,9 @@ package co.texerp.integrations.repository;
 
 import co.texerp.integrations.domain.InventoryMovement;
 import co.texerp.integrations.domain.InventoryMovementType;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -15,44 +15,54 @@ import java.util.Optional;
 
 public interface InventoryMovementRepository extends JpaRepository<InventoryMovement, Long> {
 
-    @Query(value = """
-            select m
-            from InventoryMovement m
-            join fetch m.variant v
-            join fetch v.product p
-            join fetch m.warehouse w
-            left join fetch m.compensatesMovement cm
-            where (:fromDate is null or m.movementAt >= :fromDate)
-              and (:toDate is null or m.movementAt <= :toDate)
-              and (:sku = '' or lower(v.sku) like lower(concat('%', :sku, '%')))
-              and (:warehouse = ''
-                   or lower(w.code) like lower(concat('%', :warehouse, '%'))
-                   or lower(w.name) like lower(concat('%', :warehouse, '%')))
-              and (:movementType is null or m.type = :movementType)
-              and (:document = '' or lower(m.sourceDocument) like lower(concat('%', :document, '%')))
-            order by m.movementAt desc, m.id desc
-            """,
+    @Query(
+            value = """
+                    select m
+                    from InventoryMovement m
+                    join fetch m.variant v
+                    join fetch v.product p
+                    join fetch m.warehouse w
+                    left join fetch m.compensatesMovement cm
+                    where (:filterFrom = false or m.movementAt >= :fromDate)
+                      and (:filterTo = false or m.movementAt <= :toDate)
+                      and (:sku = '' or lower(v.sku) like lower(concat('%', :sku, '%')))
+                      and (:warehouse = ''
+                           or lower(w.code) like lower(concat('%', :warehouse, '%'))
+                           or lower(w.name) like lower(concat('%', :warehouse, '%')))
+                      and (:filterMovementType = false or m.type = :movementType)
+                      and (:document = '' or lower(m.sourceDocument) like lower(concat('%', :document, '%')))
+                    order by m.movementAt desc, m.id desc
+                    """,
             countQuery = """
-            select count(m)
-            from InventoryMovement m
-            join m.variant v
-            join m.warehouse w
-            where (:fromDate is null or m.movementAt >= :fromDate)
-              and (:toDate is null or m.movementAt <= :toDate)
-              and (:sku = '' or lower(v.sku) like lower(concat('%', :sku, '%')))
-              and (:warehouse = ''
-                   or lower(w.code) like lower(concat('%', :warehouse, '%'))
-                   or lower(w.name) like lower(concat('%', :warehouse, '%')))
-              and (:movementType is null or m.type = :movementType)
-              and (:document = '' or lower(m.sourceDocument) like lower(concat('%', :document, '%')))
-            """)
+                    select count(m)
+                    from InventoryMovement m
+                    join m.variant v
+                    join m.warehouse w
+                    where (:filterFrom = false or m.movementAt >= :fromDate)
+                      and (:filterTo = false or m.movementAt <= :toDate)
+                      and (:sku = '' or lower(v.sku) like lower(concat('%', :sku, '%')))
+                      and (:warehouse = ''
+                           or lower(w.code) like lower(concat('%', :warehouse, '%'))
+                           or lower(w.name) like lower(concat('%', :warehouse, '%')))
+                      and (:filterMovementType = false or m.type = :movementType)
+                      and (:document = '' or lower(m.sourceDocument) like lower(concat('%', :document, '%')))
+                    """
+    )
     Page<InventoryMovement> search(
+            @Param("filterFrom") boolean filterFrom,
             @Param("fromDate") Instant fromDate,
+
+            @Param("filterTo") boolean filterTo,
             @Param("toDate") Instant toDate,
+
             @Param("sku") String sku,
             @Param("warehouse") String warehouse,
+
+            @Param("filterMovementType") boolean filterMovementType,
             @Param("movementType") InventoryMovementType movementType,
+
             @Param("document") String document,
+
             Pageable pageable
     );
 
@@ -66,7 +76,6 @@ public interface InventoryMovementRepository extends JpaRepository<InventoryMove
             where m.id = :id
             """)
     Optional<InventoryMovement> findDetailedById(@Param("id") Long id);
-
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""

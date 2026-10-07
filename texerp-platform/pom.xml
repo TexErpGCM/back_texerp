@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
 		 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         https://maven.apache.org/xsd/maven-4.0.0.xsd">
 
 	<modelVersion>4.0.0</modelVersion>
 
@@ -21,29 +22,43 @@
 
 	<properties>
 		<java.version>17</java.version>
+
+		<!-- Reportes -->
+		<apache-poi.version>5.5.1</apache-poi.version>
+		<jasperreports.version>7.0.8</jasperreports.version>
+
+		<!-- JWT -->
+		<jjwt.version>0.12.6</jjwt.version>
+
+		<!-- OpenAPI -->
+		<springdoc.version>3.1.0</springdoc.version>
 	</properties>
 
 	<dependencies>
 
-		<!-- Spring Boot Base -->
+		<!-- ========================================================= -->
+		<!-- SPRING BOOT                                               -->
+		<!-- ========================================================= -->
+
+		<!-- Base -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter</artifactId>
 		</dependency>
 
-		<!-- Spring Web / REST API -->
+		<!-- REST API -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 
-		<!-- Spring Security -->
+		<!-- Security -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
 
-		<!-- Spring Data JPA -->
+		<!-- JPA / Hibernate -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
@@ -61,76 +76,136 @@
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
 
-		<!-- Tests Spring Boot -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-test</artifactId>
-			<scope>test</scope>
-		</dependency>
 
-		<!-- PostgreSQL de produccion (VPS OVHcloud). -->
+		<!-- ========================================================= -->
+		<!-- BASE DE DATOS                                             -->
+		<!-- ========================================================= -->
+
+		<!-- PostgreSQL -->
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
 			<scope>runtime</scope>
 		</dependency>
 
-		<!-- Esquema versionado; Hibernate solo lo valida al iniciar.
-		     spring-boot-starter-flyway trae el modulo de autoconfiguracion
-		     (spring-boot-flyway) que registra FlywayAutoConfiguration; sin el,
-		     flyway-core queda en el classpath pero Spring Boot 4.x nunca lo
-		     ejecuta (no hay error ni log, simplemente no migra). -->
+
+		<!-- ========================================================= -->
+		<!-- FLYWAY                                                    -->
+		<!-- ========================================================= -->
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-flyway</artifactId>
 		</dependency>
+
 		<dependency>
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-database-postgresql</artifactId>
 		</dependency>
 
-		<!-- Base aislada usada exclusivamente por el perfil de pruebas. -->
-		<dependency>
-			<groupId>com.h2database</groupId>
-			<artifactId>h2</artifactId>
-			<scope>test</scope>
-		</dependency>
+
+		<!-- ========================================================= -->
+		<!-- JWT                                                       -->
+		<!-- ========================================================= -->
 
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
 			<artifactId>jjwt-api</artifactId>
-			<version>0.12.6</version>
+			<version>${jjwt.version}</version>
 		</dependency>
+
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
 			<artifactId>jjwt-impl</artifactId>
-			<version>0.12.6</version>
+			<version>${jjwt.version}</version>
 			<scope>runtime</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
 			<artifactId>jjwt-jackson</artifactId>
-			<version>0.12.6</version>
+			<version>${jjwt.version}</version>
 			<scope>runtime</scope>
 		</dependency>
+
+
+		<!-- ========================================================= -->
+		<!-- SWAGGER / OPENAPI                                         -->
+		<!-- ========================================================= -->
 
 		<dependency>
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-			<version>3.1.0</version>
+			<version>${springdoc.version}</version>
 		</dependency>
 
-		<!-- Tests Spring Security -->
+
+		<!-- ========================================================= -->
+		<!-- REPORTES EXCEL - APACHE POI                               -->
+		<!-- ========================================================= -->
+
+		<dependency>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi-ooxml</artifactId>
+			<version>${apache-poi.version}</version>
+		</dependency>
+
+
+		<!-- ========================================================= -->
+		<!-- REPORTES PDF - JASPERREPORTS                              -->
+		<!-- ========================================================= -->
+
+		<dependency>
+			<groupId>net.sf.jasperreports</groupId>
+			<artifactId>jasperreports</artifactId>
+			<version>${jasperreports.version}</version>
+		</dependency>
+
+		<!--
+            Desde JasperReports 7 varias funcionalidades fueron
+            separadas en módulos. Este módulo contiene el exportador PDF.
+        -->
+		<dependency>
+			<groupId>net.sf.jasperreports</groupId>
+			<artifactId>jasperreports-pdf</artifactId>
+			<version>${jasperreports.version}</version>
+		</dependency>
+
+
+		<!-- ========================================================= -->
+		<!-- TESTS                                                     -->
+		<!-- ========================================================= -->
+
+		<!-- Spring Boot Tests -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- Spring Security Tests -->
 		<dependency>
 			<groupId>org.springframework.security</groupId>
 			<artifactId>spring-security-test</artifactId>
 			<scope>test</scope>
 		</dependency>
 
+		<!-- H2 solo para tests -->
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<scope>test</scope>
+		</dependency>
+
 	</dependencies>
 
+
+	<!-- ============================================================= -->
+	<!-- BUILD                                                         -->
+	<!-- ============================================================= -->
+
 	<build>
+
 		<plugins>
 
 			<plugin>
@@ -139,6 +214,7 @@
 			</plugin>
 
 		</plugins>
+
 	</build>
 
 </project>

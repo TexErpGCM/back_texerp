@@ -40,22 +40,43 @@ public class InventoryMovementService {
             int size
     ) {
         validateDateRange(fromDate, toDate);
+
         int safePage = Math.max(page, 0);
         int safeSize = Math.min(Math.max(size, 1), 100);
+
         InventoryMovementType movementType = parseType(type);
 
+        String normalizedSku = normalizeFilter(sku);
+        String normalizedWarehouse = normalizeFilter(warehouse);
+        String normalizedDocument = normalizeFilter(document);
+
+        boolean filterFrom = fromDate != null;
+        boolean filterTo = toDate != null;
+        boolean filterMovementType = movementType != null;
+
         var result = repository.search(
+                filterFrom,
                 fromDate,
+
+                filterTo,
                 toDate,
-                normalizeFilter(sku),
-                normalizeFilter(warehouse),
+
+                normalizedSku,
+                normalizedWarehouse,
+
+                filterMovementType,
                 movementType,
-                normalizeFilter(document),
+
+                normalizedDocument,
+
                 PageRequest.of(safePage, safeSize)
         );
 
         return new InventoryMovementPage(
-                result.getContent().stream().map(this::toResponse).toList(),
+                result.getContent()
+                        .stream()
+                        .map(this::toResponse)
+                        .toList(),
                 result.getNumber(),
                 result.getSize(),
                 result.getTotalElements(),
@@ -75,10 +96,16 @@ public class InventoryMovementService {
             String reason
     ) {
         InventoryMovement original = repository.findForCompensation(movementId)
-                .orElseThrow(() -> new EntityNotFoundException("Movimiento de inventario no encontrado"));
+                .orElseThrow(() ->
+                        new EntityNotFoundException(
+                                "Movimiento de inventario no encontrado"
+                        )
+                );
 
         if (repository.existsCompensationFor(movementId)) {
-            throw new BusinessConflictException("El movimiento ya posee un movimiento compensatorio");
+            throw new BusinessConflictException(
+                    "El movimiento ya posee un movimiento compensatorio"
+            );
         }
 
         var result = balanceUpdater.applyCompensatingMovement(
@@ -93,17 +120,25 @@ public class InventoryMovementService {
     @Transactional(readOnly = true)
     public void rejectMutation(Long id) {
         requireDetailed(id);
+
         throw new BusinessConflictException(
-                "Los movimientos confirmados son inmutables. Cree un movimiento compensatorio para corregirlo"
+                "Los movimientos confirmados son inmutables. " +
+                        "Cree un movimiento compensatorio para corregirlo"
         );
     }
 
     private InventoryMovement requireDetailed(Long id) {
         return repository.findDetailedById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Movimiento de inventario no encontrado"));
+                .orElseThrow(() ->
+                        new EntityNotFoundException(
+                                "Movimiento de inventario no encontrado"
+                        )
+                );
     }
 
-    private InventoryMovementResponse toResponse(InventoryMovement movement) {
+    private InventoryMovementResponse toResponse(
+            InventoryMovement movement
+    ) {
         return new InventoryMovementResponse(
                 movement.id,
                 movement.variant.id,
@@ -125,7 +160,9 @@ public class InventoryMovementService {
                 movement.performedBy,
                 movement.movementAt,
                 movement.reason,
-                movement.compensatesMovement == null ? null : movement.compensatesMovement.id
+                movement.compensatesMovement == null
+                        ? null
+                        : movement.compensatesMovement.id
         );
     }
 
@@ -133,18 +170,31 @@ public class InventoryMovementService {
         if (type == null || type.isBlank()) {
             return null;
         }
+
         try {
-            return InventoryMovementType.valueOf(type.trim().toUpperCase(Locale.ROOT));
+            return InventoryMovementType.valueOf(
+                    type.trim().toUpperCase(Locale.ROOT)
+            );
         } catch (IllegalArgumentException exception) {
             throw new IllegalArgumentException(
-                    "Tipo de movimiento inválido. Valores permitidos: SALE, RECEIPT, ADJUSTMENT, COMPENSATION"
+                    "Tipo de movimiento inválido. " +
+                            "Valores permitidos: SALE, RECEIPT, ADJUSTMENT, COMPENSATION"
             );
         }
     }
 
-    private void validateDateRange(Instant fromDate, Instant toDate) {
-        if (fromDate != null && toDate != null && fromDate.isAfter(toDate)) {
-            throw new IllegalArgumentException("La fecha inicial no puede ser posterior a la fecha final");
+    private void validateDateRange(
+            Instant fromDate,
+            Instant toDate
+    ) {
+        if (
+                fromDate != null
+                        && toDate != null
+                        && fromDate.isAfter(toDate)
+        ) {
+            throw new IllegalArgumentException(
+                    "La fecha inicial no puede ser posterior a la fecha final"
+            );
         }
     }
 

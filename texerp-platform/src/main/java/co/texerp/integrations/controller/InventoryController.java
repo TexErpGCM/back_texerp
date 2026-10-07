@@ -6,6 +6,7 @@ import co.texerp.integrations.dto.InventoryDtos.InventoryPage;
 import co.texerp.integrations.dto.InventoryDtos.MinimumStockRequest;
 import co.texerp.integrations.dto.InventoryDtos.SkuInventoryResponse;
 import co.texerp.integrations.service.InventoryService;
+import co.texerp.integrations.service.InventoryReportService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,15 +16,26 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+
+import java.nio.charset.StandardCharsets;
 
 @RestController
 @RequestMapping("/api/v1/inventory")
 public class InventoryController {
 
     private final InventoryService service;
+    private final InventoryReportService reportService;
 
-    public InventoryController(InventoryService service) {
+    public InventoryController(
+            InventoryService service,
+            InventoryReportService reportService
+    ) {
         this.service = service;
+        this.reportService = reportService;
     }
 
     @GetMapping
@@ -66,6 +78,56 @@ public class InventoryController {
                 "Inventario por SKU consultado correctamente",
                 service.findBySku(sku)
         );
+    }
+
+    @GetMapping("/reports/excel")
+    public ResponseEntity<byte[]> exportExcel(
+            @RequestParam(defaultValue = "") String sku,
+            @RequestParam(defaultValue = "") String product,
+            @RequestParam(defaultValue = "") String warehouse,
+            @RequestParam(defaultValue = "") String status,
+            @RequestParam(defaultValue = "false") boolean lowStock,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        byte[] report = reportService.generateExcel(
+                sku, product, warehouse, status, lowStock, page, size
+        );
+
+        return downloadResponse(
+                report,
+                "inventario.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+    }
+
+    @GetMapping("/reports/pdf")
+    public ResponseEntity<byte[]> exportPdf(
+            @RequestParam(defaultValue = "") String sku,
+            @RequestParam(defaultValue = "") String product,
+            @RequestParam(defaultValue = "") String warehouse,
+            @RequestParam(defaultValue = "") String status,
+            @RequestParam(defaultValue = "false") boolean lowStock,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        byte[] report = reportService.generatePdf(
+                sku, product, warehouse, status, lowStock, page, size
+        );
+
+        return downloadResponse(report, "inventario.pdf", MediaType.APPLICATION_PDF_VALUE);
+    }
+
+    private ResponseEntity<byte[]> downloadResponse(byte[] content, String filename, String contentType) {
+        ContentDisposition disposition = ContentDisposition.attachment()
+                .filename(filename, StandardCharsets.UTF_8)
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+                .contentType(MediaType.parseMediaType(contentType))
+                .contentLength(content.length)
+                .body(content);
     }
 
     @PatchMapping("/variants/{variantId}/warehouses/{warehouseId}/minimum")

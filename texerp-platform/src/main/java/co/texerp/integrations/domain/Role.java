@@ -13,20 +13,29 @@ public enum Role {
                     Permission.USER_UPDATE,
                     Permission.USER_DELETE,
 
-                    Permission.AUDIT_READ
+                    Permission.AUDIT_READ,
+
+                    Permission.INVENTORY_READ,
+                    Permission.INVENTORY_MOVEMENT_READ,
+                    Permission.INVENTORY_ADJUST,
+                    Permission.INVENTORY_NEGATIVE_ADJUST
             )
     ),
 
     ANALISTA(
             Set.of(
-                    Permission.DASHBOARD_READ
+                    Permission.DASHBOARD_READ,
+                    Permission.INVENTORY_READ,
+                    Permission.INVENTORY_MOVEMENT_READ
             )
     ),
 
     VENDEDOR(
             Set.of(
-                    Permission.DASHBOARD_READ
-    ));
+                    Permission.DASHBOARD_READ,
+                    Permission.INVENTORY_READ
+            )
+    );
 
     private final Set<Permission> permissions;
 

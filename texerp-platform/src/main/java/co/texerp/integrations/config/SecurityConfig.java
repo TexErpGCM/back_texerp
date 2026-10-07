@@ -171,6 +171,63 @@ public class SecurityConfig {
                         )
                         .hasAuthority("AUDIT_READ")
 
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/inventory",
+                                "/api/v1/inventory/low-stock",
+                                "/api/v1/inventory/sku/**"
+                        )
+                        .hasAuthority("INVENTORY_READ")
+
+                        // Consultar trazabilidad de movimientos
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/inventory/movements",
+                                "/api/v1/inventory/movements/**"
+                        )
+                        .hasAuthority("INVENTORY_MOVEMENT_READ")
+
+                        // Configurar mínimos de inventario
+                        .requestMatchers(
+                                HttpMethod.PATCH,
+                                "/api/v1/inventory/variants/*/warehouses/*/minimum"
+                        )
+                        .hasAuthority("INVENTORY_ADJUST")
+
+                        // Registrar ajustes manuales
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/inventory/adjustments"
+                        )
+                        .hasAuthority("INVENTORY_ADJUST")
+
+                        // Corregir mediante movimiento compensatorio
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/inventory/movements/*/compensations"
+                        )
+                        .hasAuthority("INVENTORY_ADJUST")
+
+                        // Intentos de mutación directa también quedan restringidos;
+                        // el controlador responderá que el movimiento es inmutable.
+                        .requestMatchers(
+                                HttpMethod.PUT,
+                                "/api/v1/inventory/movements/**"
+                        )
+                        .hasAuthority("INVENTORY_ADJUST")
+
+                        .requestMatchers(
+                                HttpMethod.PATCH,
+                                "/api/v1/inventory/movements/**"
+                        )
+                        .hasAuthority("INVENTORY_ADJUST")
+
+                        .requestMatchers(
+                                HttpMethod.DELETE,
+                                "/api/v1/inventory/movements/**"
+                        )
+                        .hasAuthority("INVENTORY_ADJUST")
+
                         // =========================
                         // RESTO DEL SISTEMA
                         // =========================

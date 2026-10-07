@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="inventory-report"
+              pageWidth="842"
+              pageHeight="595"
+              orientation="Landscape"
+              columnWidth="802"
+              leftMargin="20"
+              rightMargin="20"
+              topMargin="20"
+              bottomMargin="20">
+
+    <parameter name="REPORT_TITLE" class="java.lang.String"/>
+    <parameter name="REPORT_FILTERS" class="java.lang.String"/>
+    <parameter name="TOTAL_RECORDS" class="java.lang.Integer"/>
+
+    <field name="sku" class="java.lang.String"/>
+    <field name="productCode" class="java.lang.String"/>
+    <field name="productName" class="java.lang.String"/>
+    <field name="warehouseCode" class="java.lang.String"/>
+    <field name="warehouseName" class="java.lang.String"/>
+    <field name="available" class="java.math.BigDecimal"/>
+    <field name="reserved" class="java.math.BigDecimal"/>
+    <field name="minimum" class="java.math.BigDecimal"/>
+    <field name="status" class="java.lang.String"/>
+    <field name="lowStock" class="java.lang.String"/>
+    <field name="updatedAt" class="java.lang.String"/>
+
+    <title>
+        <band height="56">
+            <textField>
+                <reportElement x="0" y="0" width="802" height="24"/>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="16" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$P{REPORT_TITLE}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="0" y="28" width="650" height="18"/>
+                <textElement>
+                    <font size="8"/>
+                </textElement>
+                <textFieldExpression><![CDATA["Filtros: " + $P{REPORT_FILTERS}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="650" y="28" width="152" height="18"/>
+                <textElement textAlignment="Right">
+                    <font size="8"/>
+                </textElement>
+                <textFieldExpression><![CDATA["Registros: " + $P{TOTAL_RECORDS}]]></textFieldExpression>
+            </textField>
+        </band>
+    </title>
+
+    <columnHeader>
+        <band height="30">
+            <staticText><reportElement x="0" y="0" width="62" height="30" backcolor="#D9EAF7" mode="Opaque"/><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[SKU]]></text></staticText>
+            <staticText><reportElement x="62" y="0" width="65" height="30" backcolor="#D9EAF7" mode="Opaque"/><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Cód. producto]]></text></staticText>
+            <staticText><reportElement x="127" y="0" width="105" height="30" backcolor="#D9EAF7" mode="Opaque"/><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Producto]]></text></staticText>
+            <staticText><reportElement x="232" y="0" width="60" height="30" backcolor="#D9EAF7" mode="Opaque"/><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Cód. bodega]]></text></staticText>
+            <staticText><reportElement x="292" y="0" width="85" height="30" backcolor="#D9EAF7" mode="Opaque"/><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Bodega]]></text></staticText>
+            <staticText><reportElement x="377" y="0" width="58" height="30" backcolor="#D9EAF7" mode="Opaque"/><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Disponible]]></text></staticText>
+            <staticText><reportElement x="435" y="0" width="56" height="30" backcolor="#D9EAF7" mode="Opaque"/><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Reservado]]></text></staticText>
+            <staticText><reportElement x="491" y="0" width="52" height="30" backcolor="#D9EAF7" mode="Opaque"/><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Mínimo]]></text></staticText>
+            <staticText><reportElement x="543" y="0" width="68" height="30" backcolor="#D9EAF7" mode="Opaque"/><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Estado]]></text></staticText>
+            <staticText><reportElement x="611" y="0" width="55" height="30" backcolor="#D9EAF7" mode="Opaque"/><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Bajo stock]]></text></staticText>
+            <staticText><reportElement x="666" y="0" width="136" height="30" backcolor="#D9EAF7" mode="Opaque"/><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Última actualización]]></text></staticText>
+        </band>
+    </columnHeader>
+
+    <detail>
+        <band height="24">
+            <textField><reportElement x="0" y="0" width="62" height="24"/><textElement verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{sku}]]></textFieldExpression></textField>
+            <textField><reportElement x="62" y="0" width="65" height="24"/><textElement verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{productCode}]]></textFieldExpression></textField>
+            <textField isStretchWithOverflow="true"><reportElement x="127" y="0" width="105" height="24"/><textElement verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{productName}]]></textFieldExpression></textField>
+            <textField><reportElement x="232" y="0" width="60" height="24"/><textElement verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{warehouseCode}]]></textFieldExpression></textField>
+            <textField isStretchWithOverflow="true"><reportElement x="292" y="0" width="85" height="24"/><textElement verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{warehouseName}]]></textFieldExpression></textField>
+            <textField pattern="#0.000"><reportElement x="377" y="0" width="58" height="24"/><textElement textAlignment="Right" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{available}]]></textFieldExpression></textField>
+            <textField pattern="#0.000"><reportElement x="435" y="0" width="56" height="24"/><textElement textAlignment="Right" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{reserved}]]></textFieldExpression></textField>
+            <textField pattern="#0.000"><reportElement x="491" y="0" width="52" height="24"/><textElement textAlignment="Right" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{minimum}]]></textFieldExpression></textField>
+            <textField><reportElement x="543" y="0" width="68" height="24"/><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{status}]]></textFieldExpression></textField>
+            <textField><reportElement x="611" y="0" width="55" height="24"/><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{lowStock}]]></textFieldExpression></textField>
+            <textField><reportElement x="666" y="0" width="136" height="24"/><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{updatedAt}]]></textFieldExpression></textField>
+        </band>
+    </detail>
+
+    <pageFooter>
+        <band height="20">
+            <textField>
+                <reportElement x="652" y="0" width="150" height="20"/>
+                <textElement textAlignment="Right"><font size="8"/></textElement>
+                <textFieldExpression><![CDATA["Página " + $V{PAGE_NUMBER}]]></textFieldExpression>
+            </textField>
+        </band>
+    </pageFooter>
+</jasperReport>
