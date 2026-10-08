@@ -229,6 +229,33 @@ public class SecurityConfig {
                         .hasAuthority("INVENTORY_ADJUST")
 
                         // =========================
+                        // COTIZACIONES
+                        // =========================
+                        .requestMatchers(HttpMethod.GET, "/api/v1/quotations/**")
+                        .hasAuthority("QUOTATION_READ")
+
+                        .requestMatchers(HttpMethod.POST, "/api/v1/quotations")
+                        .hasAuthority("QUOTATION_CREATE")
+
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/quotations/*/send", "/api/v1/quotations/*/cancel")
+                        .hasAuthority("QUOTATION_UPDATE")
+
+                        .requestMatchers(HttpMethod.POST, "/api/v1/quotations/*/convert")
+                        .hasAuthority("QUOTATION_CONVERT")
+
+                        // =========================
+                        // VENTAS Y PAGOS
+                        // =========================
+                        .requestMatchers(HttpMethod.GET, "/api/v1/sales/**")
+                        .hasAuthority("SALE_READ")
+
+                        .requestMatchers(HttpMethod.POST, "/api/v1/sales")
+                        .hasAuthority("SALE_CREATE")
+
+                        .requestMatchers(HttpMethod.POST, "/api/v1/sales/*/payments")
+                        .hasAuthority("PAYMENT_CREATE")
+
+                        // =========================
                         // RESTO DEL SISTEMA
                         // =========================
                         .anyRequest()

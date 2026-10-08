@@ -18,7 +18,15 @@ public enum Role {
                     Permission.INVENTORY_READ,
                     Permission.INVENTORY_MOVEMENT_READ,
                     Permission.INVENTORY_ADJUST,
-                    Permission.INVENTORY_NEGATIVE_ADJUST
+                    Permission.INVENTORY_NEGATIVE_ADJUST,
+
+                    Permission.QUOTATION_READ,
+                    Permission.QUOTATION_CREATE,
+                    Permission.QUOTATION_UPDATE,
+                    Permission.QUOTATION_CONVERT,
+                    Permission.SALE_READ,
+                    Permission.SALE_CREATE,
+                    Permission.PAYMENT_CREATE
             )
     ),
 
@@ -33,7 +41,14 @@ public enum Role {
     VENDEDOR(
             Set.of(
                     Permission.DASHBOARD_READ,
-                    Permission.INVENTORY_READ
+                    Permission.INVENTORY_READ,
+                    Permission.QUOTATION_READ,
+                    Permission.QUOTATION_CREATE,
+                    Permission.QUOTATION_UPDATE,
+                    Permission.QUOTATION_CONVERT,
+                    Permission.SALE_READ,
+                    Permission.SALE_CREATE,
+                    Permission.PAYMENT_CREATE
             )
     );
 
