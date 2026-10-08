@@ -1,7 +1,5 @@
 package co.texerp.integrations.dto;
 
-import co.texerp.integrations.domain.Permission;
-import co.texerp.integrations.domain.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
@@ -14,7 +12,6 @@ public final class AuthDtos {
     }
 
     public record LoginRequest(
-
             @NotBlank(message = "El correo es obligatorio")
             @Email(message = "El correo no tiene un formato válido")
             String email,
@@ -37,9 +34,10 @@ public final class AuthDtos {
     public record UserSession(
             Long id,
             String name,
+            String username,
             String email,
-            Role role,
-            Set<Permission> permissions
+            Set<String> roles,
+            Set<String> permissions
     ) {
     }
 
@@ -54,7 +52,8 @@ public final class AuthDtos {
             String refreshToken,
             String tokenType,
             long expiresIn,
-            Instant refreshTokenExpiresAt
+            Instant refreshTokenExpiresAt,
+            UserSession user
     ) {
     }
 }

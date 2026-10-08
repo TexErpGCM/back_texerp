@@ -4,9 +4,10 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
 import java.time.Instant;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Entity
 @Table(
@@ -43,10 +44,21 @@ public class AppUser extends BaseEntity {
     @Column(nullable = false)
     public String password;
 
-    @NotNull
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    public Role role;
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "app_user_role",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id"),
+            uniqueConstraints = @UniqueConstraint(
+                    name = "uk_app_user_role",
+                    columnNames = {
+                            "user_id",
+                            "role_id"
+                    }
+            )
+    )
+    public Set<Role> roles =
+            new LinkedHashSet<>();
 
     @Column(nullable = false)
     public boolean active = true;
@@ -70,8 +82,8 @@ public class AppUser extends BaseEntity {
         return password;
     }
 
-    public Role getRole() {
-        return role;
+    public Set<Role> getRoles() {
+        return roles;
     }
 
     public boolean isActive() {
@@ -80,5 +92,20 @@ public class AppUser extends BaseEntity {
 
     public Instant getLastLoginAt() {
         return lastLoginAt;
+    }
+
+    public Set<Permission> getEffectivePermissions() {
+
+        Set<Permission> effective =
+                new LinkedHashSet<>();
+
+        roles.forEach(
+                role ->
+                        effective.addAll(
+                                role.getPermissions()
+                        )
+        );
+
+        return effective;
     }
 }

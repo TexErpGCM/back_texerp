@@ -1,5 +1,8 @@
 package co.texerp.integrations.controller;
 
+import co.texerp.integrations.domain.AppUser;
+import co.texerp.integrations.domain.Permission;
+import co.texerp.integrations.domain.Role;
 import co.texerp.integrations.dto.ApiResponse;
 import co.texerp.integrations.dto.AuthDtos;
 import co.texerp.integrations.repository.UserRepository;
@@ -22,6 +25,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -52,6 +57,7 @@ public class AuthController {
         this.audit = audit;
         this.userDetailsService = userDetailsService;
     }
+
     @PostMapping("/login")
     @Transactional
     public ApiResponse<AuthDtos.LoginResponse> login(
@@ -74,9 +80,9 @@ public class AuthController {
         UserDetails principal =
                 (UserDetails) authentication.getPrincipal();
 
-        var user = users
-                .selectByEmail(request.email())
-                .orElseThrow();
+        AppUser user =
+                users.selectByEmail(request.email())
+                        .orElseThrow();
 
         String accessToken =
                 jwtService.generateAccessToken(principal);
@@ -100,15 +106,10 @@ public class AuthController {
         );
 
         AuthDtos.UserSession session =
-                new AuthDtos.UserSession(
-                        user.id,
-                        user.name,
-                        user.email,
-                        user.role,
-                        user.role.getPermissions()
-                );
+                toSession(user);
 
-        AuthDtos.LoginResponse response =
+        return ApiResponse.ok(
+                "Login exitoso",
                 new AuthDtos.LoginResponse(
                         accessToken,
                         refreshToken.token(),
@@ -116,17 +117,12 @@ public class AuthController {
                         jwtProperties.accessExpirationMinutes() * 60,
                         refreshToken.expiresAt(),
                         session
-                );
-
-        return ApiResponse.ok(
-                "Login exitoso",
-                response
+                )
         );
     }
 
     @PostMapping("/logout")
     public ApiResponse<Void> logout() {
-
         return ApiResponse.ok(
                 "Logout lógico: elimina el token del frontend",
                 null
@@ -150,20 +146,57 @@ public class AuthController {
                 );
 
         String accessToken =
-                jwtService.generateAccessToken(userDetails);
+                jwtService.generateAccessToken(
+                        userDetails
+                );
 
-        AuthDtos.RefreshResponse response =
+        AppUser user =
+                users.selectByEmail(
+                        rotated.email()
+                ).orElseThrow();
+
+        AuthDtos.UserSession session =
+                toSession(user);
+
+        return ApiResponse.ok(
+                "Sesión renovada correctamente",
                 new AuthDtos.RefreshResponse(
                         accessToken,
                         rotated.token(),
                         "Bearer",
                         jwtProperties.accessExpirationMinutes() * 60,
-                        rotated.expiresAt()
-                );
+                        rotated.expiresAt(),
+                        session
+                )
+        );
+    }
 
-        return ApiResponse.ok(
-                "Sesión renovada correctamente",
-                response
+    private AuthDtos.UserSession toSession(
+            AppUser user
+    ) {
+
+        Set<String> roles =
+                user.getRoles()
+                        .stream()
+                        .map(Role::getName)
+                        .collect(Collectors.toSet());
+
+        Set<String> permissions =
+                user.getRoles()
+                        .stream()
+                        .flatMap(
+                                role -> role.getPermissions().stream()
+                        )
+                        .map(Permission::name)
+                        .collect(Collectors.toSet());
+
+        return new AuthDtos.UserSession(
+                user.id,
+                user.getName(),
+                user.getUsername(),
+                user.getEmail(),
+                roles,
+                permissions
         );
     }
 }

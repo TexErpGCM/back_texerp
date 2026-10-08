@@ -1,6 +1,5 @@
 package co.texerp.integrations.service;
 
-import co.texerp.integrations.domain.Role;
 import co.texerp.integrations.repository.UserRepository;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
@@ -8,9 +7,10 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Service
 public class UserDetailsServiceImpl implements UserDetailsService {
@@ -22,47 +22,28 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String email) {
-
         var user = repository.selectByEmail(email)
-                .orElseThrow(() ->
-                        new UsernameNotFoundException(
-                                "Usuario no encontrado"
-                        )
-                );
+                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
 
-        Role role = user.getRole();
-
-        if (role == null) {
-            throw new UsernameNotFoundException(
-                    "Usuario no disponible"
-            );
+        if (user.roles == null || user.roles.isEmpty()) {
+            throw new UsernameNotFoundException("Usuario sin roles asignados");
         }
 
-        List<SimpleGrantedAuthority> authorities =
-                new ArrayList<>();
+        Set<SimpleGrantedAuthority> authorities = new LinkedHashSet<>();
 
-        // Rol
-        authorities.add(
-                new SimpleGrantedAuthority(
-                        "ROLE_" + role.name()
-                )
-        );
-
-        // Permisos asociados al rol
-        role.getPermissions()
-                .forEach(permission ->
-                        authorities.add(
-                                new SimpleGrantedAuthority(
-                                        permission.name()
-                                )
-                        )
-                );
+        user.roles.forEach(role -> {
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + role.name));
+            role.permissions.forEach(permission ->
+                    authorities.add(new SimpleGrantedAuthority(permission.name()))
+            );
+        });
 
         return new User(
-                user.getEmail(),
-                user.getPassword(),
-                user.isActive(),
+                user.email,
+                user.password,
+                user.active,
                 true,
                 true,
                 true,

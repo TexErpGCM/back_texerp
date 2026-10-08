@@ -163,6 +163,84 @@ public class SecurityConfig {
                         .hasAuthority("USER_DELETE")
 
                         // =========================
+                        // ROLES Y PERMISOS
+                        // =========================
+                        .requestMatchers(HttpMethod.GET, "/api/v1/roles/permissions")
+                        .hasAuthority("PERMISSION_READ")
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/roles", "/api/v1/roles/**")
+                        .hasAuthority("ROLE_READ")
+
+                        .requestMatchers(HttpMethod.POST, "/api/v1/roles")
+                        .hasAuthority("ROLE_CREATE")
+
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/roles/**")
+                        .hasAuthority("ROLE_UPDATE")
+
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/roles/**")
+                        .hasAuthority("ROLE_DELETE")
+
+                        // =========================
+                        // CLIENTES
+                        // =========================
+                        .requestMatchers(HttpMethod.GET, "/api/v1/customers", "/api/v1/customers/**")
+                        .hasAuthority("CUSTOMER_READ")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/customers")
+                        .hasAuthority("CUSTOMER_CREATE")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/customers/**")
+                        .hasAuthority("CUSTOMER_UPDATE")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/customers/**")
+                        .hasAuthority("CUSTOMER_UPDATE")
+
+                        // =========================
+                        // BODEGAS
+                        // =========================
+                        .requestMatchers(HttpMethod.GET, "/api/v1/warehouses", "/api/v1/warehouses/**")
+                        .hasAuthority("WAREHOUSE_READ")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/warehouses")
+                        .hasAuthority("WAREHOUSE_CREATE")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/warehouses/**")
+                        .hasAuthority("WAREHOUSE_UPDATE")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/warehouses/**")
+                        .hasAuthority("WAREHOUSE_UPDATE")
+
+                        // =========================
+                        // PRODUCTOS
+                        // =========================
+                        .requestMatchers(HttpMethod.GET, "/api/v1/products", "/api/v1/products/**")
+                        .hasAuthority("PRODUCT_READ")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/products")
+                        .hasAuthority("PRODUCT_CREATE")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/products/**")
+                        .hasAuthority("PRODUCT_UPDATE")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/products/**")
+                        .hasAuthority("PRODUCT_UPDATE")
+
+                        // =========================
+                        // VARIANTES
+                        // =========================
+                        .requestMatchers(HttpMethod.GET, "/api/v1/variants", "/api/v1/variants/**")
+                        .hasAuthority("PRODUCT_VARIANT_READ")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/products/*/variants")
+                        .hasAuthority("PRODUCT_VARIANT_CREATE")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/variants/**")
+                        .hasAuthority("PRODUCT_VARIANT_UPDATE")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/variants/**")
+                        .hasAuthority("PRODUCT_VARIANT_UPDATE")
+
+                        // =========================
+                        // PROVEEDORES
+                        // =========================
+                        .requestMatchers(HttpMethod.GET, "/api/v1/suppliers", "/api/v1/suppliers/**")
+                        .hasAuthority("SUPPLIER_READ")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/suppliers")
+                        .hasAuthority("SUPPLIER_CREATE")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/suppliers/**")
+                        .hasAuthority("SUPPLIER_UPDATE")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/suppliers/**")
+                        .hasAuthority("SUPPLIER_UPDATE")
+
+                        // =========================
                         // AUDITORÍA
                         // =========================
                         .requestMatchers(
