@@ -33,8 +33,12 @@ public enum Role {
     ANALISTA(
             Set.of(
                     Permission.DASHBOARD_READ,
+
                     Permission.INVENTORY_READ,
-                    Permission.INVENTORY_MOVEMENT_READ
+                    Permission.INVENTORY_MOVEMENT_READ,
+
+                    Permission.QUOTATION_READ,
+                    Permission.SALE_READ
             )
     ),
 
