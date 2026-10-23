@@ -39,7 +39,6 @@ public final class SupplierDtos {
             Long id,
             String taxId,
             String name,
-            String phone,
             String email,
             boolean active,
             Instant createdAt,

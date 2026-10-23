@@ -194,7 +194,6 @@ public class SupplierService {
                 supplier.id,
                 supplier.taxId,
                 supplier.name,
-                supplier.phone,
                 supplier.email,
                 supplier.active,
                 supplier.createdAt,

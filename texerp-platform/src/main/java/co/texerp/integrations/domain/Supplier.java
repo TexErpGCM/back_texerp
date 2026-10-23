@@ -16,9 +16,6 @@ public class Supplier extends BaseEntity {
     @Column(nullable = false, length = 150)
     public String name;
 
-    @Column(nullable = false, length = 30)
-    public String phone;
-
     @Column(nullable = false, length = 150)
     public String email;
 
