@@ -1,3 +1,4 @@
+
 package co.texerp.integrations.controller;
 
 import co.texerp.integrations.domain.QuotationStatus;
@@ -16,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 
 @RestController
-@RequestMapping("/api/v1/quotations")
+@RequestMapping({"/api/v1/quotations", "/api/v1/quotes"})
 public class QuotationController {
 
     private final QuotationService service;

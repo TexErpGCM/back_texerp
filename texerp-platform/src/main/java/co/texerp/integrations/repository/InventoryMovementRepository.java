@@ -89,6 +89,14 @@ public interface InventoryMovementRepository extends JpaRepository<InventoryMove
     Optional<InventoryMovement> findForCompensation(@Param("id") Long id);
 
     @Query("""
+            select m from InventoryMovement m
+            where m.sourceDocument = :document and m.type = :type
+            order by m.id asc
+            """)
+    java.util.List<InventoryMovement> findBySourceDocumentAndType(
+            @Param("document") String document, @Param("type") InventoryMovementType type);
+
+    @Query("""
             select case when count(m) > 0 then true else false end
             from InventoryMovement m
             where m.compensatesMovement.id = :movementId

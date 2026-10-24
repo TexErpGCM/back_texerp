@@ -1,3 +1,4 @@
+
 package co.texerp.integrations.config;
 
 import co.texerp.integrations.security.JwtAuthenticationFilter;
@@ -44,70 +45,37 @@ public class SecurityConfig {
     ) throws Exception {
 
         http
-
-                // =========================
-                // CSRF
-                // =========================
                 .csrf(csrf -> csrf.disable())
 
-                // =========================
-                // HEADERS
-                // =========================
-                // Necesario para H2 Console
                 .headers(headers ->
                         headers.frameOptions(frame -> frame.sameOrigin())
                 )
 
-                // =========================
-                // CORS
-                // =========================
                 .cors(cors ->
                         cors.configurationSource(corsConfigurationSource())
                 )
 
-                // =========================
-                // SESIONES
-                // =========================
-                // API stateless con JWT
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(
                                 SessionCreationPolicy.STATELESS
                         )
                 )
 
-                // =========================
-                // AUTORIZACIONES
-                // =========================
                 .authorizeHttpRequests(auth -> auth
 
-                        // =========================
-                        // AUTH - PÚBLICO
-                        // =========================
-                        .requestMatchers(
-                                "/api/v1/auth/**"
-                        )
+                        // AUTH - PUBLICO
+                        .requestMatchers("/api/v1/auth/**")
                         .permitAll()
 
-                        // =========================
-                        // ENDPOINTS PÚBLICOS
-                        // =========================
-                        .requestMatchers(
-                                "/api/v1/public/**"
-                        )
+                        // ENDPOINTS PUBLICOS
+                        .requestMatchers("/api/v1/public/**")
                         .permitAll()
 
-                        // =========================
                         // H2 CONSOLE
-                        // SOLO DESARROLLO
-                        // =========================
-                        .requestMatchers(
-                                "/h2-console/**"
-                        )
+                        .requestMatchers("/h2-console/**")
                         .permitAll()
 
-                        // =========================
                         // SWAGGER
-                        // =========================
                         .requestMatchers(
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
@@ -115,26 +83,14 @@ public class SecurityConfig {
                         )
                         .permitAll()
 
-                        // =========================
                         // ACTUATOR
-                        // =========================
-                        .requestMatchers(
-                                "/actuator/health"
-                        )
+                        .requestMatchers("/actuator/health")
                         .permitAll()
 
-                        // =========================
                         // USUARIOS
-                        // =========================
-
-                        // Crear usuario
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                "/api/v1/users"
-                        )
+                        .requestMatchers(HttpMethod.POST, "/api/v1/users")
                         .hasAuthority("USER_CREATE")
 
-                        // Consultar usuarios
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/v1/users",
@@ -142,33 +98,24 @@ public class SecurityConfig {
                         )
                         .hasAuthority("USER_READ")
 
-                        // Actualizar usuario
-                        .requestMatchers(
-                                HttpMethod.PUT,
-                                "/api/v1/users/**"
-                        )
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/users/**")
                         .hasAuthority("USER_UPDATE")
 
-                        .requestMatchers(
-                                HttpMethod.PATCH,
-                                "/api/v1/users/**"
-                        )
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/users/**")
                         .hasAuthority("USER_UPDATE")
 
-                        // Eliminar usuario
-                        .requestMatchers(
-                                HttpMethod.DELETE,
-                                "/api/v1/users/**"
-                        )
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/users/**")
                         .hasAuthority("USER_DELETE")
 
-                        // =========================
                         // ROLES Y PERMISOS
-                        // =========================
                         .requestMatchers(HttpMethod.GET, "/api/v1/roles/permissions")
                         .hasAuthority("PERMISSION_READ")
 
-                        .requestMatchers(HttpMethod.GET, "/api/v1/roles", "/api/v1/roles/**")
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/roles",
+                                "/api/v1/roles/**"
+                        )
                         .hasAuthority("ROLE_READ")
 
                         .requestMatchers(HttpMethod.POST, "/api/v1/roles")
@@ -180,75 +127,102 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/roles/**")
                         .hasAuthority("ROLE_DELETE")
 
-                        // =========================
                         // CLIENTES
-                        // =========================
-                        .requestMatchers(HttpMethod.GET, "/api/v1/customers", "/api/v1/customers/**")
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/customers",
+                                "/api/v1/customers/**"
+                        )
                         .hasAuthority("CUSTOMER_READ")
+
                         .requestMatchers(HttpMethod.POST, "/api/v1/customers")
                         .hasAuthority("CUSTOMER_CREATE")
+
                         .requestMatchers(HttpMethod.PUT, "/api/v1/customers/**")
                         .hasAuthority("CUSTOMER_UPDATE")
+
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/customers/**")
                         .hasAuthority("CUSTOMER_UPDATE")
 
-                        // =========================
                         // BODEGAS
-                        // =========================
-                        .requestMatchers(HttpMethod.GET, "/api/v1/warehouses", "/api/v1/warehouses/**")
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/warehouses",
+                                "/api/v1/warehouses/**"
+                        )
                         .hasAuthority("WAREHOUSE_READ")
+
                         .requestMatchers(HttpMethod.POST, "/api/v1/warehouses")
                         .hasAuthority("WAREHOUSE_CREATE")
+
                         .requestMatchers(HttpMethod.PUT, "/api/v1/warehouses/**")
                         .hasAuthority("WAREHOUSE_UPDATE")
+
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/warehouses/**")
                         .hasAuthority("WAREHOUSE_UPDATE")
 
-                        // =========================
                         // PRODUCTOS
-                        // =========================
-                        .requestMatchers(HttpMethod.GET, "/api/v1/products", "/api/v1/products/**")
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/products",
+                                "/api/v1/products/**"
+                        )
                         .hasAuthority("PRODUCT_READ")
+
                         .requestMatchers(HttpMethod.POST, "/api/v1/products")
                         .hasAuthority("PRODUCT_CREATE")
+
                         .requestMatchers(HttpMethod.PUT, "/api/v1/products/**")
                         .hasAuthority("PRODUCT_UPDATE")
+
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/products/**")
                         .hasAuthority("PRODUCT_UPDATE")
 
-                        // =========================
                         // VARIANTES
-                        // =========================
-                        .requestMatchers(HttpMethod.GET, "/api/v1/variants", "/api/v1/variants/**")
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/variants",
+                                "/api/v1/variants/**"
+                        )
                         .hasAuthority("PRODUCT_VARIANT_READ")
-                        .requestMatchers(HttpMethod.POST, "/api/v1/products/*/variants")
+
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/products/*/variants"
+                        )
                         .hasAuthority("PRODUCT_VARIANT_CREATE")
+
                         .requestMatchers(HttpMethod.PUT, "/api/v1/variants/**")
                         .hasAuthority("PRODUCT_VARIANT_UPDATE")
+
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/variants/**")
                         .hasAuthority("PRODUCT_VARIANT_UPDATE")
 
-                        // =========================
                         // PROVEEDORES
-                        // =========================
-                        .requestMatchers(HttpMethod.GET, "/api/v1/suppliers", "/api/v1/suppliers/**")
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/suppliers",
+                                "/api/v1/suppliers/**"
+                        )
                         .hasAuthority("SUPPLIER_READ")
+
                         .requestMatchers(HttpMethod.POST, "/api/v1/suppliers")
                         .hasAuthority("SUPPLIER_CREATE")
+
                         .requestMatchers(HttpMethod.PUT, "/api/v1/suppliers/**")
                         .hasAuthority("SUPPLIER_UPDATE")
+
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/suppliers/**")
                         .hasAuthority("SUPPLIER_UPDATE")
 
-                        // =========================
-                        // AUDITORÍA
-                        // =========================
+                        // AUDITORIA
                         .requestMatchers(
                                 "/api/v1/audit/**",
                                 "/api/v1/auditoria/**"
                         )
                         .hasAuthority("AUDIT_READ")
 
+                        // INVENTARIO
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/v1/inventory",
@@ -257,7 +231,6 @@ public class SecurityConfig {
                         )
                         .hasAuthority("INVENTORY_READ")
 
-                        // Consultar trazabilidad de movimientos
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/v1/inventory/movements",
@@ -265,29 +238,24 @@ public class SecurityConfig {
                         )
                         .hasAuthority("INVENTORY_MOVEMENT_READ")
 
-                        // Configurar mínimos de inventario
                         .requestMatchers(
                                 HttpMethod.PATCH,
                                 "/api/v1/inventory/variants/*/warehouses/*/minimum"
                         )
                         .hasAuthority("INVENTORY_ADJUST")
 
-                        // Registrar ajustes manuales
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/v1/inventory/adjustments"
                         )
                         .hasAuthority("INVENTORY_ADJUST")
 
-                        // Corregir mediante movimiento compensatorio
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/v1/inventory/movements/*/compensations"
                         )
                         .hasAuthority("INVENTORY_ADJUST")
 
-                        // Intentos de mutación directa también quedan restringidos;
-                        // el controlador responderá que el movimiento es inmutable.
                         .requestMatchers(
                                 HttpMethod.PUT,
                                 "/api/v1/inventory/movements/**"
@@ -306,43 +274,98 @@ public class SecurityConfig {
                         )
                         .hasAuthority("INVENTORY_ADJUST")
 
-                        // =========================
-                        // COTIZACIONES
-                        // =========================
-                        .requestMatchers(HttpMethod.GET, "/api/v1/quotations/**")
+                        // COTIZACIONES - DOS RUTAS COMPATIBLES
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/quotations",
+                                "/api/v1/quotations/**",
+                                "/api/v1/quotes",
+                                "/api/v1/quotes/**"
+                        )
                         .hasAuthority("QUOTATION_READ")
 
-                        .requestMatchers(HttpMethod.POST, "/api/v1/quotations")
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/quotations",
+                                "/api/v1/quotes"
+                        )
                         .hasAuthority("QUOTATION_CREATE")
 
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/quotations/*/send", "/api/v1/quotations/*/cancel")
+                        .requestMatchers(
+                                HttpMethod.PATCH,
+                                "/api/v1/quotations/*/send",
+                                "/api/v1/quotations/*/cancel",
+                                "/api/v1/quotes/*/send",
+                                "/api/v1/quotes/*/cancel"
+                        )
                         .hasAuthority("QUOTATION_UPDATE")
 
-                        .requestMatchers(HttpMethod.POST, "/api/v1/quotations/*/convert")
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/quotations/*/convert",
+                                "/api/v1/quotes/*/convert"
+                        )
                         .hasAuthority("QUOTATION_CONVERT")
 
-                        // =========================
                         // VENTAS Y PAGOS
-                        // =========================
-                        .requestMatchers(HttpMethod.GET, "/api/v1/sales/**")
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/sales/**"
+                        )
                         .hasAuthority("SALE_READ")
 
                         .requestMatchers(HttpMethod.POST, "/api/v1/sales")
                         .hasAuthority("SALE_CREATE")
 
-                        .requestMatchers(HttpMethod.POST, "/api/v1/sales/*/payments")
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/sales/*/payments"
+                        )
                         .hasAuthority("PAYMENT_CREATE")
 
-                        // =========================
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/sales/*/dispatch"
+                        )
+                        .hasAuthority("SALE_DISPATCH")
+
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/sales/*/deliver"
+                        )
+                        .hasAuthority("SALE_DELIVER")
+
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/sales/*/cancel"
+                        )
+                        .hasAuthority("SALE_CANCEL")
+
+                        // ORDENES DE COMPRA
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/purchase-orders/**"
+                        )
+                        .hasAuthority("PURCHASE_ORDER_READ")
+
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/purchase-orders"
+                        )
+                        .hasAuthority("PURCHASE_ORDER_CREATE")
+
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/purchase-orders/*/approve",
+                                "/api/v1/purchase-orders/*/reject"
+                        )
+                        .hasAuthority("PURCHASE_ORDER_APPROVE")
+
                         // RESTO DEL SISTEMA
-                        // =========================
                         .anyRequest()
                         .authenticated()
                 )
 
-                // =========================
-                // JWT FILTER
-                // =========================
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
@@ -351,19 +374,11 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // =========================
-    // JWT SERVICE
-    // =========================
     @Bean
-    JwtService jwtService(
-            JwtProperties properties
-    ) {
+    JwtService jwtService(JwtProperties properties) {
         return new JwtService(properties);
     }
 
-    // =========================
-    // JWT FILTER
-    // =========================
     @Bean
     JwtAuthenticationFilter jwtAuthenticationFilter(
             JwtService jwtService,
@@ -375,17 +390,11 @@ public class SecurityConfig {
         );
     }
 
-    // =========================
-    // PASSWORD ENCODER
-    // =========================
     @Bean
     PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // =========================
-    // AUTHENTICATION MANAGER
-    // =========================
     @Bean
     AuthenticationManager authenticationManager(
             AuthenticationConfiguration configuration
@@ -393,24 +402,15 @@ public class SecurityConfig {
         return configuration.getAuthenticationManager();
     }
 
-    // =========================
-    // CORS
-    // =========================
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
 
-        CorsConfiguration config =
-                new CorsConfiguration();
+        CorsConfiguration config = new CorsConfiguration();
 
         config.setAllowedOrigins(
-                Arrays.stream(
-                                allowedOrigins.split(",")
-                        )
+                Arrays.stream(allowedOrigins.split(","))
                         .map(String::trim)
-                        .filter(
-                                origin ->
-                                        !origin.isBlank()
-                        )
+                        .filter(origin -> !origin.isBlank())
                         .toList()
         );
 
@@ -425,9 +425,7 @@ public class SecurityConfig {
                 )
         );
 
-        config.setAllowedHeaders(
-                List.of("*")
-        );
+        config.setAllowedHeaders(List.of("*"));
 
         config.setAllowCredentials(true);
 

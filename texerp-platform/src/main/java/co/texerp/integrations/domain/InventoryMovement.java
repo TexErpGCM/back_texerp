@@ -96,7 +96,6 @@ public class InventoryMovement extends BaseEntity {
     )
     public InventoryMovement compensatesMovement;
 
-    @PrePersist
     protected void validateTraceability() {
         if (quantity == null || reservedDelta == null
                 || previousAvailable == null || newAvailable == null
@@ -120,7 +119,6 @@ public class InventoryMovement extends BaseEntity {
         }
     }
 
-    @PreUpdate
     protected void rejectUpdate() {
         throw new ImmutableInventoryMovementException();
     }

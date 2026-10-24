@@ -31,6 +31,22 @@ public class Sale extends BaseEntity {
     @Column(nullable = false, length = 30)
     public SaleStatus status = SaleStatus.CONFIRMED;
 
+    public Instant dispatchedAt;
+    @Column(length = 255)
+    public String dispatchedBy;
+    @Column(length = 1000)
+    public String dispatchEvidence;
+    public Instant completedAt;
+    @Column(length = 255)
+    public String completedBy;
+    public Instant cancelledAt;
+    @Column(length = 255)
+    public String cancelledBy;
+    @Column(length = 500)
+    public String cancellationReason;
+    @Column(length = 1000)
+    public String paymentTreatment;
+
     @Column(name = "confirmed_at", nullable = false)
     public Instant confirmedAt;
 

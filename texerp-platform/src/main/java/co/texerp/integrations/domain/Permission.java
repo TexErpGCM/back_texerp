@@ -50,7 +50,13 @@ public enum Permission {
     SALE_READ("Ventas", "Consultar ventas"),
     SALE_CREATE("Ventas", "Crear ventas"),
 
-    PAYMENT_CREATE("Pagos", "Registrar pagos");
+    PAYMENT_CREATE("Pagos", "Registrar pagos"),
+    SALE_DISPATCH("Ventas", "Despachar ventas"),
+    SALE_DELIVER("Ventas", "Confirmar entrega"),
+    SALE_CANCEL("Ventas", "Cancelar ventas"),
+    PURCHASE_ORDER_READ("Compras", "Consultar órdenes"),
+    PURCHASE_ORDER_CREATE("Compras", "Crear órdenes"),
+    PURCHASE_ORDER_APPROVE("Compras", "Aprobar o rechazar órdenes");
 
     private final String module;
     private final String description;
