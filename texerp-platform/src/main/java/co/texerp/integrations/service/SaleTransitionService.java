@@ -1,18 +1,23 @@
+
 package co.texerp.integrations.service;
 
 import co.texerp.integrations.config.BusinessConflictException;
 import co.texerp.integrations.domain.*;
 import co.texerp.integrations.dto.SaleDtos.SaleResponse;
 import co.texerp.integrations.repository.*;
+
 import jakarta.persistence.EntityNotFoundException;
+
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.time.Instant;
 import java.util.List;
 
 @Service
 public class SaleTransitionService {
+
     private final SaleRepository sales;
     private final InventoryMovementRepository movements;
     private final InventoryBalanceUpdater updater;
@@ -20,9 +25,14 @@ public class SaleTransitionService {
     private final AuditService audit;
     private final SaleService saleService;
 
-    public SaleTransitionService(SaleRepository sales, InventoryMovementRepository movements,
-                                 InventoryBalanceUpdater updater, PaymentRepository payments,
-                                 AuditService audit, SaleService saleService) {
+    public SaleTransitionService(
+            SaleRepository sales,
+            InventoryMovementRepository movements,
+            InventoryBalanceUpdater updater,
+            PaymentRepository payments,
+            AuditService audit,
+            SaleService saleService
+    ) {
         this.sales = sales;
         this.movements = movements;
         this.updater = updater;
@@ -34,88 +44,256 @@ public class SaleTransitionService {
     @Transactional
     public SaleResponse dispatch(Long id, String evidence) {
         Sale sale = requireSale(id);
+
         if (sale.status != SaleStatus.PAID) {
-            throw new BusinessConflictException("Solo una venta pagada puede despacharse");
+            throw new BusinessConflictException(
+                    "Solo una venta pagada puede despacharse"
+            );
         }
+
         if (evidence != null && evidence.length() > 1000) {
-            throw new IllegalArgumentException("La evidencia no puede superar 1000 caracteres");
+            throw new IllegalArgumentException(
+                    "La evidencia no puede superar 1000 caracteres"
+            );
         }
+
         SaleStatus previous = sale.status;
+
         sale.status = SaleStatus.DISPATCHED;
         sale.dispatchedAt = Instant.now();
         sale.dispatchedBy = username();
-        sale.dispatchEvidence = evidence == null || evidence.isBlank() ? null : evidence.trim();
-        audit.log("SALE_DISPATCH", "Sale", sale.id, previous + " -> " + sale.status
-                + " usuario=" + sale.dispatchedBy + " fecha=" + sale.dispatchedAt, null);
+        sale.dispatchEvidence =
+                evidence == null || evidence.isBlank()
+                        ? null
+                        : evidence.trim();
+
+        audit.log(
+                "SALE_DISPATCH",
+                "Sale",
+                sale.id,
+                previous + " -> " + sale.status
+                        + " usuario=" + sale.dispatchedBy
+                        + " fecha=" + sale.dispatchedAt,
+                null
+        );
+
         sales.saveAndFlush(sale);
+
         return saleService.toResponse(sale);
     }
 
     @Transactional
     public SaleResponse deliver(Long id) {
         Sale sale = requireSale(id);
+
         if (sale.status != SaleStatus.DISPATCHED) {
-            throw new BusinessConflictException("Solo una venta despachada puede completarse");
+            throw new BusinessConflictException(
+                    "Solo una venta despachada puede completarse"
+            );
         }
+
         SaleStatus previous = sale.status;
+
         sale.status = SaleStatus.COMPLETED;
         sale.completedAt = Instant.now();
         sale.completedBy = username();
-        audit.log("SALE_DELIVER", "Sale", sale.id, previous + " -> " + sale.status
-                + " usuario=" + sale.completedBy + " fecha=" + sale.completedAt, null);
+
+        audit.log(
+                "SALE_DELIVER",
+                "Sale",
+                sale.id,
+                previous + " -> " + sale.status
+                        + " usuario=" + sale.completedBy
+                        + " fecha=" + sale.completedAt,
+                null
+        );
+
         sales.saveAndFlush(sale);
+
         return saleService.toResponse(sale);
     }
 
     @Transactional
     public SaleResponse cancel(Long id, String reason) {
+
         if (reason == null || reason.isBlank()) {
-            throw new IllegalArgumentException("El motivo de cancelación es obligatorio");
+            throw new IllegalArgumentException(
+                    "El motivo de cancelación es obligatorio"
+            );
         }
-        if (reason.trim().length() > 500) {
-            throw new IllegalArgumentException("El motivo no puede superar 500 caracteres");
+
+        String cleanReason = reason.trim();
+
+        if (cleanReason.length() > 500) {
+            throw new IllegalArgumentException(
+                    "El motivo no puede superar 500 caracteres"
+            );
         }
+
         Sale sale = requireSale(id);
+
         if (sale.status == SaleStatus.COMPLETED) {
-            throw new BusinessConflictException("La venta completada requiere un proceso de devolución o nota crédito; no admite cancelación directa");
+            throw new BusinessConflictException(
+                    "La venta completada requiere un proceso " +
+                            "de devolución o nota crédito; " +
+                            "no admite cancelación directa"
+            );
         }
-        if (sale.status == SaleStatus.DISPATCHED || sale.status == SaleStatus.CANCELLED) {
-            throw new BusinessConflictException("La venta en estado " + sale.status + " no admite cancelación directa");
+
+        if (sale.status == SaleStatus.DISPATCHED
+                || sale.status == SaleStatus.CANCELLED) {
+            throw new BusinessConflictException(
+                    "La venta en estado " + sale.status +
+                            " no admite cancelación directa"
+            );
         }
+
         SaleStatus previous = sale.status;
-        List<InventoryMovement> originals = movements.findBySourceDocumentAndType(
-                sale.number,
-                InventoryMovementType.SALE
-        );        if (originals.isEmpty() || originals.size() != sale.lines.size()) {
-            throw new BusinessConflictException("No se encontraron los movimientos originales de la venta; se requiere revisión manual");
+
+        // Consultar los movimientos originales de la venta.
+        List<InventoryMovement> originals =
+                movements.findBySourceDocumentAndType(
+                        sale.number,
+                        InventoryMovementType.SALE
+                );
+
+        if (originals.isEmpty()
+                || originals.size() != sale.lines.size()) {
+            throw new BusinessConflictException(
+                    "No se encontraron todos los movimientos " +
+                            "originales de la venta. " +
+                            "Se requiere revisión manual"
+            );
         }
+
+        /*
+         * Validar todos los movimientos antes de comenzar
+         * las compensaciones.
+         */
         for (InventoryMovement movement : originals) {
-            if (movements.existsCompensationFor(movement.id)) {
-                throw new BusinessConflictException("El movimiento " + movement.id + " ya fue compensado");
+
+            if (movement == null || movement.id == null) {
+                throw new BusinessConflictException(
+                        "La venta contiene un movimiento " +
+                                "de inventario sin identificador válido"
+                );
             }
-            updater.applyCompensatingMovement(movement, sale.number + "-CANCEL", reason);
+
+            if (movement.variant == null
+                    || movement.variant.id == null) {
+                throw new BusinessConflictException(
+                        "El movimiento " + movement.id +
+                                " no tiene una variante de producto válida"
+                );
+            }
+
+            if (movement.warehouse == null
+                    || movement.warehouse.id == null) {
+                throw new BusinessConflictException(
+                        "El movimiento " + movement.id +
+                                " no tiene una bodega válida"
+                );
+            }
+
+            if (movement.quantity == null) {
+                throw new BusinessConflictException(
+                        "El movimiento " + movement.id +
+                                " no tiene una cantidad registrada"
+                );
+            }
+
+            if (movements.existsCompensationFor(movement.id)) {
+                throw new BusinessConflictException(
+                        "El movimiento " + movement.id +
+                                " ya fue compensado"
+                );
+            }
         }
+
+        /*
+         * Compensar los movimientos originales.
+         *
+         * La transacción garantiza que, si alguna
+         * compensación falla, se revierten también
+         * las anteriores de esta operación.
+         */
+        for (InventoryMovement movement : originals) {
+
+            InventoryMovement original =
+                    movements.findForCompensation(movement.id)
+                            .orElseThrow(() ->
+                                    new BusinessConflictException(
+                                            "No se encontró el movimiento " +
+                                                    movement.id +
+                                                    " para realizar la compensación"
+                                    )
+                            );
+
+            updater.applyCompensatingMovement(
+                    original,
+                    sale.number + "-CANCEL",
+                    cleanReason
+            );
+        }
+
+        // Actualizar estado de la venta.
         sale.status = SaleStatus.CANCELLED;
         sale.cancelledAt = Instant.now();
         sale.cancelledBy = username();
+
         var paid = payments.totalPaidBySaleId(sale.id);
-        sale.cancellationReason = reason.trim();
-        sale.paymentTreatment = paid != null && paid.signum() > 0
-                ? "Pagos conservados. Reembolso pendiente de proceso financiero por " + paid.toPlainString()
-                : "Sin pagos registrados; no requiere reembolso";
-        audit.log("SALE_CANCEL", "Sale", sale.id, previous + " -> " + sale.status
-                + " usuario=" + sale.cancelledBy + " fecha=" + sale.cancelledAt
-                + " motivo=" + sale.cancellationReason + " pagos=" + sale.paymentTreatment, null);
+
+        sale.cancellationReason = cleanReason;
+
+        sale.paymentTreatment =
+                paid != null && paid.signum() > 0
+                        ? "Pagos conservados. Reembolso pendiente " +
+                        "de proceso financiero por " +
+                        paid.toPlainString()
+                        : "Sin pagos registrados; no requiere reembolso";
+
+        audit.log(
+                "SALE_CANCEL",
+                "Sale",
+                sale.id,
+                previous + " -> " + sale.status
+                        + " usuario=" + sale.cancelledBy
+                        + " fecha=" + sale.cancelledAt
+                        + " motivo=" + sale.cancellationReason
+                        + " pagos=" + sale.paymentTreatment,
+                null
+        );
+
         sales.saveAndFlush(sale);
+
         return saleService.toResponse(sale);
     }
 
     private Sale requireSale(Long id) {
-        return sales.findForUpdate(id).orElseThrow(() -> new EntityNotFoundException("Venta no encontrada"));
+
+        if (id == null) {
+            throw new IllegalArgumentException(
+                    "El identificador de la venta es obligatorio"
+            );
+        }
+
+        return sales.findForUpdate(id)
+                .orElseThrow(() ->
+                        new EntityNotFoundException(
+                                "Venta no encontrada"
+                        )
+                );
     }
 
     private String username() {
-        var auth = SecurityContextHolder.getContext().getAuthentication();
-        return auth == null ? "sistema" : auth.getName();
+        var auth = SecurityContextHolder
+                .getContext()
+                .getAuthentication();
+
+        return auth == null
+                || auth.getName() == null
+                || auth.getName().isBlank()
+                ? "sistema"
+                : auth.getName();
     }
 }
