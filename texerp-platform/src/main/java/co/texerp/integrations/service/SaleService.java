@@ -1,10 +1,12 @@
 package co.texerp.integrations.service;
-
 import co.texerp.integrations.config.BusinessConflictException;
 import co.texerp.integrations.domain.*;
 import co.texerp.integrations.dto.SaleDtos.*;
 import co.texerp.integrations.repository.*;
+import co.texerp.integrations.service.InventoryBalanceUpdater;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.PersistenceUnitUtil;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -29,6 +31,7 @@ public class SaleService {
     private final InventoryBalanceRepository balanceRepository;
     private final InventoryBalanceUpdater inventoryBalanceUpdater;
     private final PaymentRepository paymentRepository;
+    private final PersistenceUnitUtil persistenceUnitUtil;
 
     public SaleService(
             SaleRepository saleRepository,
@@ -37,7 +40,8 @@ public class SaleService {
             WarehouseRepository warehouseRepository,
             InventoryBalanceRepository balanceRepository,
             InventoryBalanceUpdater inventoryBalanceUpdater,
-            PaymentRepository paymentRepository
+            PaymentRepository paymentRepository,
+            EntityManagerFactory entityManagerFactory
     ) {
         this.saleRepository = saleRepository;
         this.customerRepository = customerRepository;
@@ -46,6 +50,7 @@ public class SaleService {
         this.balanceRepository = balanceRepository;
         this.inventoryBalanceUpdater = inventoryBalanceUpdater;
         this.paymentRepository = paymentRepository;
+        this.persistenceUnitUtil = entityManagerFactory.getPersistenceUnitUtil();
     }
 
     @Transactional
@@ -350,15 +355,15 @@ public class SaleService {
                 sale.status,
                 sale.confirmedAt,
 
-                sale.customer != null ? sale.customer.id : null,
+                entityId(sale.customer),
                 sale.customer != null ? sale.customer.document : null,
                 sale.customer != null ? sale.customer.name : null,
 
-                sale.warehouse != null ? sale.warehouse.id : null,
+                entityId(sale.warehouse),
                 sale.warehouse != null ? sale.warehouse.code : null,
                 sale.warehouse != null ? sale.warehouse.name : null,
 
-                sale.quotation == null ? null : sale.quotation.id,
+                entityId(sale.quotation),
                 sale.quotation == null ? null : sale.quotation.number,
 
                 sale.subtotal,
@@ -379,7 +384,7 @@ public class SaleService {
 
                             return new SaleLineResponse(
                                     line.id,
-                                    line.variant != null ? line.variant.id : null,
+                                    entityId(line.variant),
                                     line.variant != null ? line.variant.sku : null,
                                     productName,
                                     line.quantity,
@@ -394,7 +399,7 @@ public class SaleService {
                         })
                         .toList(),
 
-                sale.payments.stream()
+                (sale.id == null ? List.<Payment>of() : paymentRepository.findBySaleIdOrderByPaidAtAscIdAsc(sale.id)).stream()
                         .map(payment -> new PaymentResponse(
                                 payment.id,
                                 payment.method,
@@ -428,6 +433,13 @@ public class SaleService {
                         pageable
                 )
                 .map(this::toResponse);
+    }
+
+    private Long entityId(Object entity) {
+        if (entity == null) return null;
+        Object identifier = persistenceUnitUtil.getIdentifier(entity);
+        if (identifier == null) return null;
+        return (Long) identifier;
     }
 
     private String normalize(String value) {
