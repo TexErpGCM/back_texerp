@@ -33,4 +33,15 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
                                 @Param("color") String color,
                                 @Param("active") Boolean active,
                                 Pageable pageable);
+
+    @Query("""
+    SELECT v
+    FROM ProductVariant v
+    JOIN FETCH v.product
+    JOIN FETCH v.unit
+    WHERE v.id = :id
+    """)
+    Optional<ProductVariant> findByIdWithRelations(
+            @Param("id") Long id
+    );
 }

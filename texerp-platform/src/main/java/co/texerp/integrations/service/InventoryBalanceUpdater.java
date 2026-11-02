@@ -10,6 +10,10 @@ import co.texerp.integrations.domain.Warehouse;
 import co.texerp.integrations.repository.InventoryBalanceRepository;
 import co.texerp.integrations.repository.InventoryMovementRepository;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.PersistenceUnitUtil;
+
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -26,6 +30,9 @@ public class InventoryBalanceUpdater {
     private final ProductVariantService variantService;
     private final WarehouseService warehouseService;
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
     public InventoryBalanceUpdater(
             InventoryBalanceRepository balanceRepository,
             InventoryMovementRepository movementRepository,
@@ -40,7 +47,7 @@ public class InventoryBalanceUpdater {
 
     /**
      * Aplica un movimiento confirmado y registra su trazabilidad
-     * dentro de la transacción de negocio.
+     * dentro de la misma transacción de negocio.
      */
     @Transactional(propagation = Propagation.MANDATORY)
     public MovementApplicationResult applyConfirmedMovement(
@@ -51,6 +58,9 @@ public class InventoryBalanceUpdater {
             BigDecimal reservedDelta,
             String sourceDocument
     ) {
+        validateIds(variantId, warehouseId);
+        validateDocument(sourceDocument);
+
         if (type == null) {
             throw new IllegalArgumentException(
                     "El tipo de movimiento es obligatorio"
@@ -66,13 +76,10 @@ public class InventoryBalanceUpdater {
 
         if (type == InventoryMovementType.ADJUSTMENT) {
             throw new IllegalArgumentException(
-                    "Los ajustes manuales deben registrarse " +
-                            "mediante el servicio de ajustes"
+                    "Los ajustes manuales deben registrarse mediante " +
+                            "el servicio de ajustes"
             );
         }
-
-        validateIds(variantId, warehouseId);
-        validateDocument(sourceDocument);
 
         BigDecimal safeAvailableDelta = valueOrZero(availableDelta);
         BigDecimal safeReservedDelta = valueOrZero(reservedDelta);
@@ -116,14 +123,13 @@ public class InventoryBalanceUpdater {
     ) {
         validateIds(variantId, warehouseId);
         validateDocument(sourceDocument);
+        validateReason(reason, "ajuste");
 
         if (quantity == null || quantity.signum() == 0) {
             throw new IllegalArgumentException(
                     "La cantidad del ajuste debe ser diferente de cero"
             );
         }
-
-        validateReason(reason, "ajuste");
 
         ProductVariant variant =
                 variantService.requireActive(variantId);
@@ -145,10 +151,8 @@ public class InventoryBalanceUpdater {
     }
 
     /**
-     * Revierte el impacto de un movimiento confirmado.
-     *
-     * El movimiento original permanece intacto.
-     * Se genera un nuevo movimiento de tipo COMPENSATION.
+     * Revierte el impacto de un movimiento mediante uno nuevo.
+     * El movimiento original nunca se modifica ni se elimina.
      */
     @Transactional(propagation = Propagation.MANDATORY)
     public MovementApplicationResult applyCompensatingMovement(
@@ -165,33 +169,6 @@ public class InventoryBalanceUpdater {
         validateDocument(sourceDocument);
         validateReason(reason, "compensación");
 
-        // Validar las referencias antes de consultar repositorios.
-        if (original.variant == null ||
-                original.variant.id == null) {
-            throw new BusinessConflictException(
-                    "No se puede compensar el movimiento " +
-                            original.id +
-                            ": no tiene una variante de producto válida"
-            );
-        }
-
-        if (original.warehouse == null ||
-                original.warehouse.id == null) {
-            throw new BusinessConflictException(
-                    "No se puede compensar el movimiento " +
-                            original.id +
-                            ": no tiene una bodega válida"
-            );
-        }
-
-        if (original.quantity == null) {
-            throw new BusinessConflictException(
-                    "No se puede compensar el movimiento " +
-                            original.id +
-                            ": no tiene registrada la variación disponible"
-            );
-        }
-
         if (original.type == InventoryMovementType.COMPENSATION) {
             throw new BusinessConflictException(
                     "No se permite compensar directamente " +
@@ -199,8 +176,40 @@ public class InventoryBalanceUpdater {
             );
         }
 
-        // Verificar que no exista ya una compensación.
-        // Evita devolver inventario dos veces.
+        if (original.variant == null) {
+            throw new BusinessConflictException(
+                    "El movimiento " + original.id +
+                            " no tiene una variante asociada"
+            );
+        }
+
+        if (original.warehouse == null) {
+            throw new BusinessConflictException(
+                    "El movimiento " + original.id +
+                            " no tiene una bodega asociada"
+            );
+        }
+
+        // Recuperar identificadores sin acceder a campos de proxies.
+        Long variantId = getEntityId(
+                original.variant,
+                "variante del movimiento " + original.id
+        );
+
+        Long warehouseId = getEntityId(
+                original.warehouse,
+                "bodega del movimiento " + original.id
+        );
+
+        validateIds(variantId, warehouseId);
+
+        if (original.quantity == null) {
+            throw new BusinessConflictException(
+                    "El movimiento " + original.id +
+                            " no tiene registrada la variación disponible"
+            );
+        }
+
         if (movementRepository.existsCompensationFor(original.id)) {
             throw new BusinessConflictException(
                     "El movimiento " + original.id +
@@ -209,13 +218,9 @@ public class InventoryBalanceUpdater {
         }
 
         /*
-         * Se reutilizan las entidades relacionadas con el
-         * movimiento histórico.
-         *
-         * No se utiliza requireActive(), porque una variante
-         * o bodega podría haberse desactivado después.
-         *
-         * Las entidades deben seguir existiendo en la BD.
+         * Las compensaciones utilizan las entidades históricas.
+         * No se exige que sigan activas porque pudieron ser
+         * desactivadas después de registrar el movimiento.
          */
         ProductVariant variant = original.variant;
         Warehouse warehouse = original.warehouse;
@@ -240,8 +245,8 @@ public class InventoryBalanceUpdater {
     }
 
     /**
-     * Actualiza el balance y registra el movimiento
-     * dentro de la misma transacción.
+     * Actualiza el balance y registra el movimiento de inventario.
+     * Todo ocurre dentro de la transacción de negocio.
      */
     private MovementApplicationResult applyAndTrace(
             ProductVariant variant,
@@ -254,17 +259,30 @@ public class InventoryBalanceUpdater {
             InventoryMovement compensatesMovement,
             boolean allowNegativeAvailable
     ) {
-        if (variant == null || variant.id == null) {
+        if (variant == null) {
             throw new IllegalArgumentException(
                     "La variante de producto es obligatoria"
             );
         }
 
-        if (warehouse == null || warehouse.id == null) {
+        if (warehouse == null) {
             throw new IllegalArgumentException(
                     "La bodega es obligatoria"
             );
         }
+
+        // Obtener los identificadores reales mediante JPA.
+        Long variantId = getEntityId(
+                variant,
+                "variante de producto"
+        );
+
+        Long warehouseId = getEntityId(
+                warehouse,
+                "bodega"
+        );
+
+        validateIds(variantId, warehouseId);
 
         BigDecimal safeAvailableDelta =
                 valueOrZero(availableDelta);
@@ -273,7 +291,7 @@ public class InventoryBalanceUpdater {
                 valueOrZero(reservedDelta);
 
         InventoryBalance balance = balanceRepository
-                .findForUpdate(variant.id, warehouse.id)
+                .findForUpdate(variantId, warehouseId)
                 .orElseGet(() ->
                         createBalance(variant, warehouse)
                 );
@@ -290,8 +308,10 @@ public class InventoryBalanceUpdater {
         BigDecimal newReserved =
                 previousReserved.add(safeReservedDelta);
 
+        // Controlar inventario disponible negativo.
         if (newAvailable.signum() < 0 &&
                 !allowNegativeAvailable) {
+
             String operation =
                     type == InventoryMovementType.ADJUSTMENT
                             ? "El ajuste"
@@ -307,6 +327,7 @@ public class InventoryBalanceUpdater {
             );
         }
 
+        // Controlar inventario reservado negativo.
         if (newReserved.signum() < 0) {
             throw new BusinessConflictException(
                     "El movimiento dejaría el inventario " +
@@ -314,24 +335,27 @@ public class InventoryBalanceUpdater {
             );
         }
 
+        // Actualizar balance.
         balance.availableQuantity = newAvailable;
         balance.reservedQuantity = newReserved;
 
         InventoryBalance savedBalance =
                 balanceRepository.save(balance);
 
-        InventoryMovement movement =
-                new InventoryMovement();
+        // Crear trazabilidad del movimiento.
+        InventoryMovement movement = new InventoryMovement();
 
         movement.variant = variant;
         movement.warehouse = warehouse;
         movement.type = type;
         movement.quantity = safeAvailableDelta;
         movement.reservedDelta = safeReservedDelta;
+
         movement.previousAvailable = previousAvailable;
         movement.newAvailable = newAvailable;
         movement.previousReserved = previousReserved;
         movement.newReserved = newReserved;
+
         movement.sourceDocument = sourceDocument;
         movement.performedBy = currentUsername();
         movement.movementAt = Instant.now();
@@ -348,7 +372,38 @@ public class InventoryBalanceUpdater {
     }
 
     /**
-     * Valida los identificadores antes de consultar la BD.
+     * Obtiene el identificador JPA sin leer directamente
+     * campos de entidades que pueden ser proxies LAZY.
+     */
+    private Long getEntityId(
+            Object entity,
+            String entityName
+    ) {
+        if (entity == null) {
+            throw new BusinessConflictException(
+                    "La entidad " + entityName +
+                            " no está asociada"
+            );
+        }
+
+        PersistenceUnitUtil persistenceUtil = entityManager
+                .getEntityManagerFactory()
+                .getPersistenceUnitUtil();
+
+        Object identifier = persistenceUtil.getIdentifier(entity);
+
+        if (!(identifier instanceof Long id)) {
+            throw new BusinessConflictException(
+                    "No fue posible obtener el identificador " +
+                            "de " + entityName
+            );
+        }
+
+        return id;
+    }
+
+    /**
+     * Valida los identificadores requeridos.
      */
     private void validateIds(
             Long variantId,
@@ -367,6 +422,9 @@ public class InventoryBalanceUpdater {
         }
     }
 
+    /**
+     * Valida la naturaleza del movimiento.
+     */
     private void validateMovementNature(
             InventoryMovementType type,
             BigDecimal availableDelta,
@@ -400,6 +458,9 @@ public class InventoryBalanceUpdater {
         }
     }
 
+    /**
+     * Valida documento origen.
+     */
     private void validateDocument(String sourceDocument) {
         if (sourceDocument == null ||
                 sourceDocument.isBlank()) {
@@ -415,6 +476,9 @@ public class InventoryBalanceUpdater {
         }
     }
 
+    /**
+     * Valida motivo del ajuste o compensación.
+     */
     private void validateReason(
             String reason,
             String operation
@@ -435,12 +499,14 @@ public class InventoryBalanceUpdater {
         }
     }
 
+    /**
+     * Crea un balance inicial cuando todavía no existe.
+     */
     private InventoryBalance createBalance(
             ProductVariant variant,
             Warehouse warehouse
     ) {
-        InventoryBalance balance =
-                new InventoryBalance();
+        InventoryBalance balance = new InventoryBalance();
 
         balance.variant = variant;
         balance.warehouse = warehouse;
@@ -457,6 +523,9 @@ public class InventoryBalanceUpdater {
                 : value;
     }
 
+    /**
+     * Recupera el usuario autenticado.
+     */
     private String currentUsername() {
         var authentication = SecurityContextHolder
                 .getContext()
