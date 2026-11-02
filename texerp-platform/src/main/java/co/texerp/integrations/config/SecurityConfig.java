@@ -1,4 +1,3 @@
-
 package co.texerp.integrations.config;
 
 import co.texerp.integrations.security.JwtAuthenticationFilter;
@@ -360,6 +359,13 @@ public class SecurityConfig {
                                 "/api/v1/purchase-orders/*/reject"
                         )
                         .hasAuthority("PURCHASE_ORDER_APPROVE")
+
+                        // ETL - EJECUCION MANUAL
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/etl/jobs/*/execute"
+                        )
+                        .hasAuthority("ETL_EXECUTE")
 
                         // RESTO DEL SISTEMA
                         .anyRequest()

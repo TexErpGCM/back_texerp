@@ -56,8 +56,8 @@ public enum Permission {
     SALE_CANCEL("Ventas", "Cancelar ventas"),
     PURCHASE_ORDER_READ("Compras", "Consultar órdenes"),
     PURCHASE_ORDER_CREATE("Compras", "Crear órdenes"),
-    PURCHASE_ORDER_APPROVE("Compras", "Aprobar o rechazar órdenes");
-
+    PURCHASE_ORDER_APPROVE("Compras", "Aprobar o rechazar órdenes"),
+    ETL_EXECUTE("ETL", "Ejecutar procesos ETL manualmente");
     private final String module;
     private final String description;
 

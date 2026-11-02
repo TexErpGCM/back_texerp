@@ -1,3 +1,4 @@
+
 package co.texerp.integrations.config;
 
 import co.texerp.integrations.dto.ApiResponse;
@@ -9,11 +10,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.NoSuchElementException;
 
@@ -30,171 +33,152 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> badRequest(
             RuntimeException exception
     ) {
+        String message = exception.getMessage() == null
+                || exception.getMessage().isBlank()
+                ? "La solicitud contiene información inválida"
+                : exception.getMessage();
 
-        String message =
-                exception.getMessage() == null
-                        || exception.getMessage().isBlank()
-                        ? "La solicitud contiene información inválida"
-                        : exception.getMessage();
-
-        return ResponseEntity
-                .badRequest()
-                .body(
-                        ApiResponse.error(message)
-                );
+        return ResponseEntity.badRequest()
+                .body(ApiResponse.error(message));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> validation(
             MethodArgumentNotValidException exception
     ) {
+        String message = exception.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .findFirst()
+                .map(error -> error.getDefaultMessage() == null
+                        ? "Campo inválido"
+                        : error.getDefaultMessage())
+                .orElse("La solicitud contiene información inválida");
 
-        String message =
-                exception.getBindingResult()
-                        .getFieldErrors()
-                        .stream()
-                        .findFirst()
-                        .map(error ->
-                                error.getDefaultMessage() == null
-                                        ? "Campo inválido"
-                                        : error.getDefaultMessage()
-                        )
-                        .orElse(
-                                "La solicitud contiene información inválida"
-                        );
-
-        return ResponseEntity
-                .badRequest()
-                .body(
-                        ApiResponse.error(message)
-                );
+        return ResponseEntity.badRequest()
+                .body(ApiResponse.error(message));
     }
 
     @ExceptionHandler(UserConflictException.class)
     public ResponseEntity<ApiResponse<Void>> handleUserConflict(
             UserConflictException exception
     ) {
+        String message = "Conflicto en el campo '"
+                + exception.getField()
+                + "': "
+                + exception.getMessage();
 
-        String message =
-                "Conflicto en el campo '"
-                        + exception.getField()
-                        + "': "
-                        + exception.getMessage();
-
-        return ResponseEntity
-                .status(HttpStatus.CONFLICT)
-                .body(
-                        ApiResponse.error(message)
-                );
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(message));
     }
 
     @ExceptionHandler(BusinessConflictException.class)
     public ResponseEntity<ApiResponse<Void>> conflict(
             BusinessConflictException exception
     ) {
-
-        return ResponseEntity
-                .status(HttpStatus.CONFLICT)
-                .body(
-                        ApiResponse.error(
-                                exception.getMessage()
-                        )
-                );
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(exception.getMessage()));
     }
 
+    // Conserva el código HTTP definido por el servicio.
+    // Ejemplo: ETL concurrente -> 409 Conflict.
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ApiResponse<Void>> handleResponseStatus(
+            ResponseStatusException exception
+    ) {
+        String message = exception.getReason();
+
+        if (message == null || message.isBlank()) {
+            message = "No fue posible completar la solicitud";
+        }
+
+        LOGGER.warn(
+                "Solicitud rechazada. HTTP {}: {}",
+                exception.getStatusCode().value(),
+                message
+        );
+
+        return ResponseEntity.status(exception.getStatusCode())
+                .body(ApiResponse.error(message));
+    }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiResponse<Void>> integrity(
             DataIntegrityViolationException exception
     ) {
-
         LOGGER.warn(
                 "Conflicto de integridad de datos",
                 exception
         );
 
-        return ResponseEntity
-                .status(HttpStatus.CONFLICT)
-                .body(
-                        ApiResponse.error(
-                                "La operación no puede completarse porque el registro tiene información relacionada"
-                        )
-                );
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(
+                        "La operación no puede completarse porque el registro tiene información relacionada"
+                ));
     }
-
 
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ApiResponse<Void>> notFound(
             EntityNotFoundException exception
     ) {
-
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(
-                        ApiResponse.error(
-                                exception.getMessage()
-                        )
-                );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(exception.getMessage()));
     }
 
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ApiResponse<Void>> handleBadCredentials(
             BadCredentialsException exception
     ) {
-
-        return ResponseEntity
-                .status(HttpStatus.UNAUTHORIZED)
-                .body(
-                        ApiResponse.error(
-                                "Credenciales inválidas"
-                        )
-                );
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error("Credenciales inválidas"));
     }
 
     @ExceptionHandler(DisabledException.class)
     public ResponseEntity<ApiResponse<Void>> handleDisabledUser(
             DisabledException exception
     ) {
-
-        return ResponseEntity
-                .status(HttpStatus.UNAUTHORIZED)
-                .body(
-                        ApiResponse.error(
-                                "Credenciales inválidas"
-                        )
-                );
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error("Credenciales inválidas"));
     }
 
     @ExceptionHandler(InvalidRefreshTokenException.class)
     public ResponseEntity<ApiResponse<Void>> handleInvalidRefreshToken(
             InvalidRefreshTokenException exception
     ) {
-
-        return ResponseEntity
-                .status(HttpStatus.UNAUTHORIZED)
-                .body(
-                        ApiResponse.error(
-                                "Refresh token inválido o expirado"
-                        )
-                );
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error(
+                        "Refresh token inválido o expirado"
+                ));
     }
 
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAccessDenied(
+            AccessDeniedException exception
+    ) {
+        LOGGER.warn(
+                "Acceso denegado: {}",
+                exception.getMessage()
+        );
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(
+                        "No tienes permisos para realizar esta operación"
+                ));
+    }
+
+    // Debe mantenerse como manejador de último recurso.
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> internalError(
             Exception exception
     ) {
-
         LOGGER.error(
                 "Error interno no controlado",
                 exception
         );
 
-        return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(
-                        ApiResponse.error(
-                                "Ocurrió un error interno en el servidor"
-                        )
-                );
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error(
+                        "Ocurrió un error interno en el servidor"
+                ));
     }
 }

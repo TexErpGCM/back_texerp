@@ -23,6 +23,10 @@
 	<properties>
 		<java.version>17</java.version>
 
+		<!-- Codificación del proyecto -->
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
 		<!-- Reportes -->
 		<apache-poi.version>5.5.1</apache-poi.version>
 		<jasperreports.version>7.0.8</jasperreports.version>
@@ -196,8 +200,14 @@
 			<artifactId>h2</artifactId>
 			<scope>test</scope>
 		</dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
 
-	</dependencies>
+    </dependencies>
+
 
 
 	<!-- ============================================================= -->
