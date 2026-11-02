@@ -21,5 +21,9 @@ public class AuditEvent {
     @Column(nullable = false, length = 1500)
     public String details;
     public String ip;
+    @Column(name = "old_value", length = 1500)
+    public String oldValue;
+    @Column(name = "new_value", length = 1500)
+    public String newValue;
     public boolean success = true;
 }
