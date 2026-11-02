@@ -142,9 +142,10 @@ public class SalesDashboardService {
             );
         }
 
-        if (to.equals(LocalDate.MAX)) {
+        if (from.equals(LocalDate.MIN)
+                || to.equals(LocalDate.MAX)) {
             throw new IllegalArgumentException(
-                    "La fecha final está fuera del rango permitido"
+                    "Las fechas están fuera del rango permitido"
             );
         }
 
@@ -221,6 +222,7 @@ public class SalesDashboardService {
 
             WHERE f.confirmed_at >= :from
               AND f.confirmed_at < :toExclusive
+              AND f.sale_status IN ('CONFIRMED', 'DISPATCHED')
             """);
 
         if (params.getValue("productId") != null) {
@@ -257,13 +259,19 @@ public class SalesDashboardService {
         String sql = """
             SELECT
                 COALESCE(SUM(f.total), 0) AS total_sales,
+
                 COALESCE(SUM(f.quantity), 0) AS units_sold,
+
                 COUNT(DISTINCT f.sale_id) AS sales_count,
 
                 COALESCE(
                     SUM(f.quantity * f.unit_cost),
                     0
-                ) AS total_cost
+                ) AS total_cost,
+
+                COUNT(*) FILTER (
+                    WHERE f.unit_cost IS NULL
+                ) AS missing_cost_count
 
             """ + baseFromAndWhere(params);
 
@@ -282,11 +290,23 @@ public class SalesDashboardService {
 
                     long count = rs.getLong("sales_count");
 
-                    BigDecimal cost = nz(
-                            rs.getBigDecimal("total_cost")
-                    );
+                    long missingCostCount =
+                            rs.getLong("missing_cost_count");
 
-                    BigDecimal profit = sales.subtract(cost);
+                    boolean valuationComplete =
+                            missingCostCount == 0;
+
+                    BigDecimal cost = valuationComplete
+                            ? nz(rs.getBigDecimal("total_cost"))
+                            : null;
+
+                    BigDecimal profit = valuationComplete
+                            ? sales.subtract(cost)
+                            : null;
+
+                    BigDecimal margin = valuationComplete
+                            ? percentage(profit, sales)
+                            : null;
 
                     BigDecimal averageTicket = count == 0
                             ? ZERO
@@ -303,7 +323,9 @@ public class SalesDashboardService {
                             averageTicket,
                             cost,
                             profit,
-                            percentage(profit, sales)
+                            margin,
+                            valuationComplete,
+                            missingCostCount
                     );
                 }
         );
@@ -343,7 +365,8 @@ public class SalesDashboardService {
                 ranked.sales,
                 ranked.cost,
                 ranked.units,
-                ranked.sales - ranked.cost AS profit
+                ranked.sales - ranked.cost AS profit,
+                ranked.missing_cost_count
 
             FROM (
                 SELECT
@@ -354,15 +377,25 @@ public class SalesDashboardService {
 
                     COALESCE(SUM(f.total), 0) AS sales,
 
-                    COALESCE(
-                        SUM(f.quantity * f.unit_cost),
-                        0
-                    ) AS cost,
+                    CASE
+                        WHEN COUNT(*) FILTER (
+                            WHERE f.unit_cost IS NULL
+                        ) > 0
+                        THEN NULL
+                        ELSE COALESCE(
+                            SUM(f.quantity * f.unit_cost),
+                            0
+                        )
+                    END AS cost,
 
                     COALESCE(
                         SUM(f.quantity),
                         0
-                    ) AS units
+                    ) AS units,
+
+                    COUNT(*) FILTER (
+                        WHERE f.unit_cost IS NULL
+                    ) AS missing_cost_count
 
                 """ + baseFromAndWhere(params) + """
 
@@ -373,7 +406,7 @@ public class SalesDashboardService {
 
             ORDER BY
             """ + orderColumn + """
-                DESC,
+                DESC NULLS LAST,
                 entity_id ASC
 
             LIMIT :limit
@@ -390,11 +423,23 @@ public class SalesDashboardService {
                             rs.getBigDecimal("sales")
                     );
 
-                    BigDecimal cost = nz(
-                            rs.getBigDecimal("cost")
-                    );
+                    long missingCostCount =
+                            rs.getLong("missing_cost_count");
 
-                    BigDecimal profit = sales.subtract(cost);
+                    boolean valuationComplete =
+                            missingCostCount == 0;
+
+                    BigDecimal cost = valuationComplete
+                            ? rs.getBigDecimal("cost")
+                            : null;
+
+                    BigDecimal profit = valuationComplete
+                            ? sales.subtract(nz(cost))
+                            : null;
+
+                    BigDecimal margin = valuationComplete
+                            ? percentage(profit, sales)
+                            : null;
 
                     Long id = rs.getObject(
                             "entity_id",
@@ -407,8 +452,10 @@ public class SalesDashboardService {
                             sales,
                             cost,
                             profit,
-                            percentage(profit, sales),
-                            nz(rs.getBigDecimal("units"))
+                            margin,
+                            nz(rs.getBigDecimal("units")),
+                            valuationComplete,
+                            missingCostCount
                     );
                 }
         );
@@ -418,6 +465,10 @@ public class SalesDashboardService {
             BigDecimal current,
             BigDecimal previous
     ) {
+
+        if (current == null || previous == null) {
+            return new Change(null, null);
+        }
 
         BigDecimal absolute = current.subtract(previous);
 
@@ -440,6 +491,10 @@ public class SalesDashboardService {
             BigDecimal numerator,
             BigDecimal denominator
     ) {
+
+        if (numerator == null || denominator == null) {
+            return null;
+        }
 
         if (denominator.compareTo(ZERO) == 0) {
             return ZERO;

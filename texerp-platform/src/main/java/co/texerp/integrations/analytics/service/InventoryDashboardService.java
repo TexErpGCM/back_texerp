@@ -92,16 +92,23 @@ public class InventoryDashboardService {
                         .addValue("asOfDate", to);
 
         String filters = filters(
-                params, warehouseId, productId, fabricType
+                params,
+                warehouseId,
+                productId,
+                fabricType
         );
 
         Summary summary = getSummary(params, filters);
+
         List<WarehouseStock> warehouses =
                 getWarehouses(params, filters);
+
         List<CriticalStock> critical =
                 getCriticalStock(params, filters);
+
         List<MovementSummary> movements =
                 getMovements(params, filters);
+
         List<InactiveProduct> inactive =
                 getInactiveProducts(params, filters);
 
@@ -114,7 +121,13 @@ public class InventoryDashboardService {
                 from,
                 to,
                 hasData,
-                false,
+                hasHistoricalInventory(
+                        from,
+                        to,
+                        warehouseId,
+                        productId,
+                        fabricType
+                ),
                 summary,
                 warehouses,
                 critical,
@@ -141,13 +154,14 @@ public class InventoryDashboardService {
             params.addValue("productId", productId);
         }
 
-        if (fabricType != null
-                && !fabricType.isBlank()) {
+        if (fabricType != null && !fabricType.isBlank()) {
             sql.append(
                     " AND p.fabric_type = :fabricType "
             );
+
             params.addValue(
-                    "fabricType", fabricType.trim()
+                    "fabricType",
+                    fabricType.trim()
             );
         }
 
@@ -156,28 +170,28 @@ public class InventoryDashboardService {
 
     private String balanceFrom() {
         return """
-            FROM public.inventory_balance ib
-            JOIN public.product_variant pv
-              ON pv.id = ib.variant_id
-            JOIN public.product p
-              ON p.id = pv.product_id
-            JOIN public.warehouse w
-              ON w.id = ib.warehouse_id
-            WHERE 1 = 1
-            """;
+                FROM public.inventory_balance ib
+                JOIN public.product_variant pv
+                    ON pv.id = ib.variant_id
+                JOIN public.product p
+                    ON p.id = pv.product_id
+                JOIN public.warehouse w
+                    ON w.id = ib.warehouse_id
+                WHERE 1 = 1
+                """;
     }
 
     private String movementFrom() {
         return """
-            FROM public.inventory_movement im
-            JOIN public.product_variant pv
-              ON pv.id = im.variant_id
-            JOIN public.product p
-              ON p.id = pv.product_id
-            JOIN public.warehouse w
-              ON w.id = im.warehouse_id
-            WHERE 1 = 1
-            """;
+                FROM public.inventory_movement im
+                JOIN public.product_variant pv
+                    ON pv.id = im.variant_id
+                JOIN public.product p
+                    ON p.id = pv.product_id
+                JOIN public.warehouse w
+                    ON w.id = im.warehouse_id
+                WHERE 1 = 1
+                """;
     }
 
     private Summary getSummary(
@@ -185,34 +199,39 @@ public class InventoryDashboardService {
             String filters
     ) {
         String sql = """
-            SELECT
-                COALESCE(
-                    SUM(ib.available_quantity), 0
-                ) AS available,
-                COALESCE(
-                    SUM(ib.reserved_quantity), 0
-                ) AS reserved,
-                COALESCE(
-                    SUM(
-                        ib.available_quantity
-                        * COALESCE(pv.cost, 0)
-                    ), 0
-                ) AS inventory_value,
-                COUNT(*) AS sku_warehouse_count,
-                COUNT(*) FILTER (
-                    WHERE ib.available_quantity
-                          < ib.minimum_quantity
-                ) AS below_minimum_count,
-                COALESCE(
-                    SUM(
-                        GREATEST(
-                            ib.minimum_quantity
-                            - ib.available_quantity,
-                            0
-                        )
-                    ), 0
-                ) AS below_minimum_units
-            """
+                SELECT
+                    COALESCE(
+                        SUM(ib.available_quantity), 0
+                    ) AS available,
+
+                    COALESCE(
+                        SUM(ib.reserved_quantity), 0
+                    ) AS reserved,
+
+                    COALESCE(
+                        SUM(
+                            ib.available_quantity
+                            * COALESCE(pv.cost, 0)
+                        ), 0
+                    ) AS inventory_value,
+
+                    COUNT(*) AS sku_warehouse_count,
+
+                    COUNT(*) FILTER (
+                        WHERE ib.available_quantity
+                              < ib.minimum_quantity
+                    ) AS below_minimum_count,
+
+                    COALESCE(
+                        SUM(
+                            GREATEST(
+                                ib.minimum_quantity
+                                - ib.available_quantity,
+                                0
+                            )
+                        ), 0
+                    ) AS below_minimum_units
+                """
                 + balanceFrom()
                 + filters;
 
@@ -222,14 +241,19 @@ public class InventoryDashboardService {
                 (rs, rowNum) -> {
                     BigDecimal available =
                             rs.getBigDecimal("available");
+
                     BigDecimal reserved =
                             rs.getBigDecimal("reserved");
+
                     BigDecimal value =
                             rs.getBigDecimal("inventory_value");
+
                     long count =
                             rs.getLong("sku_warehouse_count");
+
                     long below =
                             rs.getLong("below_minimum_count");
+
                     BigDecimal shortage =
                             rs.getBigDecimal("below_minimum_units");
 
@@ -264,32 +288,43 @@ public class InventoryDashboardService {
             String filters
     ) {
         String sql = """
-            SELECT
-                COALESCE(SUM(
-                    CASE
-                        WHEN im.movement_type <> 'ADJUSTMENT'
-                             AND im.quantity > 0
-                        THEN im.quantity
-                        ELSE 0
-                    END
-                ), 0) AS entries,
-                COALESCE(SUM(
-                    CASE
-                        WHEN im.movement_type <> 'ADJUSTMENT'
-                             AND im.quantity < 0
-                        THEN ABS(im.quantity)
-                        ELSE 0
-                    END
-                ), 0) AS exits,
-                COALESCE(SUM(
-                    CASE
-                        WHEN im.movement_type = 'ADJUSTMENT'
-                        THEN im.quantity
-                        ELSE 0
-                    END
-                ), 0) AS adjustments,
-                COALESCE(SUM(im.quantity), 0) AS net
-            """
+                SELECT
+                    COALESCE(
+                        SUM(
+                            CASE
+                                WHEN im.movement_type <> 'ADJUSTMENT'
+                                     AND im.quantity > 0
+                                THEN im.quantity
+                                ELSE 0
+                            END
+                        ), 0
+                    ) AS entries,
+
+                    COALESCE(
+                        SUM(
+                            CASE
+                                WHEN im.movement_type <> 'ADJUSTMENT'
+                                     AND im.quantity < 0
+                                THEN ABS(im.quantity)
+                                ELSE 0
+                            END
+                        ), 0
+                    ) AS exits,
+
+                    COALESCE(
+                        SUM(
+                            CASE
+                                WHEN im.movement_type = 'ADJUSTMENT'
+                                THEN im.quantity
+                                ELSE 0
+                            END
+                        ), 0
+                    ) AS adjustments,
+
+                    COALESCE(
+                        SUM(im.quantity), 0
+                    ) AS net
+                """
                 + movementFrom()
                 + filters
                 + """
@@ -314,27 +349,31 @@ public class InventoryDashboardService {
             String filters
     ) {
         String sql = """
-            SELECT
-                w.id AS warehouse_id,
-                w.code AS warehouse_code,
-                w.name AS warehouse_name,
-                COALESCE(
-                    SUM(ib.available_quantity), 0
-                ) AS available,
-                COALESCE(
-                    SUM(ib.reserved_quantity), 0
-                ) AS reserved,
-                COALESCE(
-                    SUM(
-                        ib.available_quantity
-                        * COALESCE(pv.cost, 0)
-                    ), 0
-                ) AS inventory_value,
-                COUNT(*) FILTER (
-                    WHERE ib.available_quantity
-                          < ib.minimum_quantity
-                ) AS below_minimum
-            """
+                SELECT
+                    w.id AS warehouse_id,
+                    w.code AS warehouse_code,
+                    w.name AS warehouse_name,
+
+                    COALESCE(
+                        SUM(ib.available_quantity), 0
+                    ) AS available,
+
+                    COALESCE(
+                        SUM(ib.reserved_quantity), 0
+                    ) AS reserved,
+
+                    COALESCE(
+                        SUM(
+                            ib.available_quantity
+                            * COALESCE(pv.cost, 0)
+                        ), 0
+                    ) AS inventory_value,
+
+                    COUNT(*) FILTER (
+                        WHERE ib.available_quantity
+                              < ib.minimum_quantity
+                    ) AS below_minimum
+                """
                 + balanceFrom()
                 + filters
                 + """
@@ -362,25 +401,28 @@ public class InventoryDashboardService {
             String filters
     ) {
         String sql = """
-            SELECT
-                pv.id AS variant_id,
-                pv.sku,
-                p.name AS product_name,
-                w.id AS warehouse_id,
-                w.name AS warehouse_name,
-                ib.available_quantity,
-                ib.reserved_quantity,
-                ib.minimum_quantity,
-                (
-                    ib.minimum_quantity
-                    - ib.available_quantity
-                ) AS shortage
-            """
+                SELECT
+                    pv.id AS variant_id,
+                    pv.sku,
+                    p.name AS product_name,
+                    w.id AS warehouse_id,
+                    w.name AS warehouse_name,
+
+                    ib.available_quantity,
+                    ib.reserved_quantity,
+                    ib.minimum_quantity,
+
+                    (
+                        ib.minimum_quantity
+                        - ib.available_quantity
+                    ) AS shortage
+                """
                 + balanceFrom()
                 + filters
                 + """
                     AND ib.available_quantity
                         < ib.minimum_quantity
+
                     ORDER BY shortage DESC, pv.sku
                     LIMIT :limit
                     """;
@@ -407,27 +449,33 @@ public class InventoryDashboardService {
             String filters
     ) {
         String sql = """
-            SELECT
-                im.movement_type,
-                COUNT(*) AS movements,
-                COALESCE(SUM(
-                    GREATEST(im.quantity, 0)
-                ), 0) AS positive_quantity,
-                COALESCE(SUM(
-                    ABS(LEAST(im.quantity, 0))
-                ), 0) AS negative_quantity,
-                COALESCE(
-                    SUM(im.quantity), 0
-                ) AS net_quantity,
-                COALESCE(
-                    SUM(im.reserved_delta), 0
-                ) AS reserved_delta
-            """
+                SELECT
+                    im.movement_type,
+
+                    COUNT(*) AS movements,
+
+                    COALESCE(
+                        SUM(GREATEST(im.quantity, 0)), 0
+                    ) AS positive_quantity,
+
+                    COALESCE(
+                        SUM(ABS(LEAST(im.quantity, 0))), 0
+                    ) AS negative_quantity,
+
+                    COALESCE(
+                        SUM(im.quantity), 0
+                    ) AS net_quantity,
+
+                    COALESCE(
+                        SUM(im.reserved_delta), 0
+                    ) AS reserved_delta
+                """
                 + movementFrom()
                 + filters
                 + """
                     AND im.movement_at >= :from
                     AND im.movement_at < :toExclusive
+
                     GROUP BY im.movement_type
                     ORDER BY im.movement_type
                     """;
@@ -451,75 +499,53 @@ public class InventoryDashboardService {
             String filters
     ) {
         String sql = """
-            SELECT
-                pv.id AS variant_id,
-                pv.sku,
-                p.name AS product_name,
-                w.id AS warehouse_id,
-                w.name AS warehouse_name,
-                ib.available_quantity,
-                CAST(
-                    MAX(im.movement_at AT TIME ZONE
-                        'America/Bogota') AS date
-                ) AS last_movement_date,
-                CASE
-                    WHEN MAX(im.movement_at) IS NULL
-                    THEN NULL
-                    ELSE (
-                        :asOfDate
-                        - CAST(
-                            MAX(im.movement_at AT TIME ZONE
-                                'America/Bogota') AS date
-                        )
-                    )
-                END AS days_without_movement
-            """
-                + balanceFrom()
-                + filters
-                + """
-                    AND ib.available_quantity > 0
-                    LEFT_JOIN_PLACEHOLDER
-                    """;
+                SELECT
+                    pv.id AS variant_id,
+                    pv.sku,
+                    p.name AS product_name,
+                    w.id AS warehouse_id,
+                    w.name AS warehouse_name,
+                    ib.available_quantity,
 
-        // El LEFT JOIN debe ir antes del WHERE.
-        // Construimos la consulta completa para mantener
-        // los filtros aplicados al balance.
-        sql = """
-            SELECT
-                pv.id AS variant_id,
-                pv.sku,
-                p.name AS product_name,
-                w.id AS warehouse_id,
-                w.name AS warehouse_name,
-                ib.available_quantity,
-                CAST(
-                    MAX(im.movement_at AT TIME ZONE
-                        'America/Bogota') AS date
-                ) AS last_movement_date,
-                CASE
-                    WHEN MAX(im.movement_at) IS NULL
-                    THEN NULL
-                    ELSE (
-                        :asOfDate
-                        - CAST(
-                            MAX(im.movement_at AT TIME ZONE
-                                'America/Bogota') AS date
+                    CAST(
+                        MAX(
+                            im.movement_at AT TIME ZONE
+                                'America/Bogota'
+                        ) AS date
+                    ) AS last_movement_date,
+
+                    CASE
+                        WHEN MAX(im.movement_at) IS NULL
+                        THEN NULL
+                        ELSE (
+                            :asOfDate
+                            - CAST(
+                                MAX(
+                                    im.movement_at AT TIME ZONE
+                                        'America/Bogota'
+                                ) AS date
+                            )
                         )
-                    )
-                END AS days_without_movement
-            FROM public.inventory_balance ib
-            JOIN public.product_variant pv
-              ON pv.id = ib.variant_id
-            JOIN public.product p
-              ON p.id = pv.product_id
-            JOIN public.warehouse w
-              ON w.id = ib.warehouse_id
-            LEFT JOIN public.inventory_movement im
-              ON im.variant_id = ib.variant_id
-             AND im.warehouse_id = ib.warehouse_id
-             AND im.movement_at < :endOfPeriod
-            WHERE ib.available_quantity > 0
-            """
+                    END AS days_without_movement
+
+                FROM public.inventory_balance ib
+
+                JOIN public.product_variant pv
+                    ON pv.id = ib.variant_id
+
+                JOIN public.product p
+                    ON p.id = pv.product_id
+
+                JOIN public.warehouse w
+                    ON w.id = ib.warehouse_id
+
+                LEFT JOIN public.inventory_movement im
+                    ON im.variant_id = ib.variant_id
+                    AND im.warehouse_id = ib.warehouse_id
+                    AND im.movement_at < :endOfPeriod
+
+                WHERE ib.available_quantity > 0
+                """
                 + filters
                 + """
                     GROUP BY
@@ -529,13 +555,15 @@ public class InventoryDashboardService {
                         w.id,
                         w.name,
                         ib.available_quantity
+
                     HAVING
                         MAX(im.movement_at) IS NULL
-                        OR MAX(im.movement_at)
-                            < :inactiveCutoff
+                        OR MAX(im.movement_at) < :inactiveCutoff
+
                     ORDER BY
                         last_movement_date ASC NULLS FIRST,
                         ib.available_quantity DESC
+
                     LIMIT :limit
                     """;
 
@@ -564,6 +592,85 @@ public class InventoryDashboardService {
                                     : ((Number) daysObject).longValue()
                     );
                 }
+        );
+    }
+
+    private boolean hasHistoricalInventory(
+            LocalDate from,
+            LocalDate to,
+            Long warehouseId,
+            Long productId,
+            String fabricType
+    ) {
+        MapSqlParameterSource params =
+                new MapSqlParameterSource()
+                        .addValue("from", from)
+                        .addValue("to", to);
+
+        StringBuilder historicalFilters =
+                new StringBuilder();
+
+        if (warehouseId != null) {
+            historicalFilters.append(
+                    " AND f.warehouse_id = :warehouseId "
+            );
+
+            params.addValue(
+                    "warehouseId",
+                    warehouseId
+            );
+        }
+
+        if (productId != null) {
+            historicalFilters.append(
+                    " AND pv.product_id = :productId "
+            );
+
+            params.addValue(
+                    "productId",
+                    productId
+            );
+        }
+
+        if (fabricType != null && !fabricType.isBlank()) {
+            historicalFilters.append(
+                    " AND p.fabric_type = :fabricType "
+            );
+
+            params.addValue(
+                    "fabricType",
+                    fabricType.trim()
+            );
+        }
+
+        String sql = """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM texerp_dw.fact_inventory f
+
+                    INNER JOIN texerp_dw.inventory_snapshot_closure c
+                        ON c.snapshot_date = f.snapshot_date
+
+                    INNER JOIN public.product_variant pv
+                        ON pv.id = f.variant_id
+
+                    INNER JOIN public.product p
+                        ON p.id = pv.product_id
+
+                    WHERE c.status = 'CLOSED'
+                      AND f.snapshot_date BETWEEN :from AND :to
+                """
+                + historicalFilters
+                + """
+                    )
+                """;
+
+        return Boolean.TRUE.equals(
+                jdbc.queryForObject(
+                        sql,
+                        params,
+                        Boolean.class
+                )
         );
     }
 }

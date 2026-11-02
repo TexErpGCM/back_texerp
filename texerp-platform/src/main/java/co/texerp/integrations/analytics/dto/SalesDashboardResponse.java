@@ -22,7 +22,9 @@ public record SalesDashboardResponse(
             BigDecimal averageTicket,
             BigDecimal totalCost,
             BigDecimal profit,
-            BigDecimal marginPercentage
+            BigDecimal marginPercentage,
+            boolean valuationComplete,
+            long missingCostCount
     ) {}
 
     public record Comparison(
@@ -46,6 +48,8 @@ public record SalesDashboardResponse(
             BigDecimal cost,
             BigDecimal profit,
             BigDecimal marginPercentage,
-            BigDecimal units
+            BigDecimal units,
+            boolean valuationComplete,
+            long missingCostCount
     ) {}
 }

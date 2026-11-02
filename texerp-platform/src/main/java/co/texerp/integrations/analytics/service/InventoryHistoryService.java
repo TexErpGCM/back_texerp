@@ -8,8 +8,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.sql.Types;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -18,6 +18,7 @@ public class InventoryHistoryService {
 
     private final NamedParameterJdbcTemplate jdbc;
 
+    // Compatibilidad con los servicios existentes.
     @Transactional(readOnly = true)
     public List<HistoryRow> findHistory(
             LocalDate from,
@@ -26,21 +27,33 @@ public class InventoryHistoryService {
             Long warehouseId,
             boolean closedOnly
     ) {
+        return findHistory(
+                from,
+                to,
+                productId,
+                warehouseId,
+                null,
+                closedOnly
+        );
+    }
 
-        // 1. Validar fechas.
-        if (from == null || to == null) {
+    // Nueva versión con filtro por tipo de tela.
+    @Transactional(readOnly = true)
+    public List<HistoryRow> findHistory(
+            LocalDate from,
+            LocalDate to,
+            Long productId,
+            Long warehouseId,
+            String fabricType,
+            boolean closedOnly
+    ) {
+
+        if (from == null || to == null || from.isAfter(to)) {
             throw new IllegalArgumentException(
-                    "Las fechas from y to son obligatorias"
+                    "El rango de fechas es inválido"
             );
         }
 
-        if (from.isAfter(to)) {
-            throw new IllegalArgumentException(
-                    "La fecha inicial no puede ser mayor que la final"
-            );
-        }
-
-        // 2. Validar filtros opcionales.
         if (productId != null && productId <= 0) {
             throw new IllegalArgumentException(
                     "productId debe ser positivo"
@@ -53,19 +66,17 @@ public class InventoryHistoryService {
             );
         }
 
-        // 3. Parámetros obligatorios.
         MapSqlParameterSource params =
                 new MapSqlParameterSource()
                         .addValue("from", from, Types.DATE)
                         .addValue("to", to, Types.DATE);
 
-        // 4. Construir condiciones dinámicas.
         StringBuilder filters = new StringBuilder();
 
         if (productId != null) {
-            filters.append("""
-                    AND pv.product_id = :productId
-                    """);
+            filters.append(
+                    " AND pv.product_id = :productId "
+            );
 
             params.addValue(
                     "productId",
@@ -75,9 +86,9 @@ public class InventoryHistoryService {
         }
 
         if (warehouseId != null) {
-            filters.append("""
-                    AND f.warehouse_id = :warehouseId
-                    """);
+            filters.append(
+                    " AND f.warehouse_id = :warehouseId "
+            );
 
             params.addValue(
                     "warehouseId",
@@ -86,26 +97,34 @@ public class InventoryHistoryService {
             );
         }
 
-        if (closedOnly) {
-            filters.append("""
-                    AND c.status = 'CLOSED'
-                    """);
+        if (fabricType != null && !fabricType.isBlank()) {
+            filters.append(
+                    " AND p.fabric_type = :fabricType "
+            );
+
+            params.addValue(
+                    "fabricType",
+                    fabricType.trim()
+            );
         }
 
-        // 5. Consultar las fotografías históricas.
+        if (closedOnly) {
+            filters.append(
+                    " AND c.status = 'CLOSED' "
+            );
+        }
+
         String sql = """
                 SELECT
                     f.snapshot_date,
                     c.status,
 
                     COALESCE(
-                        SUM(f.available_quantity),
-                        0
+                        SUM(f.available_quantity), 0
                     ) AS available,
 
                     COALESCE(
-                        SUM(f.reserved_quantity),
-                        0
+                        SUM(f.reserved_quantity), 0
                     ) AS reserved,
 
                     SUM(
@@ -120,7 +139,7 @@ public class InventoryHistoryService {
 
                     COUNT(*) FILTER (
                         WHERE f.available_quantity
-                            < f.minimum_quantity
+                              < f.minimum_quantity
                     ) AS below_minimum_count
 
                 FROM texerp_dw.fact_inventory f
@@ -131,11 +150,13 @@ public class InventoryHistoryService {
                 INNER JOIN public.product_variant pv
                     ON pv.id = f.variant_id
 
+                INNER JOIN public.product p
+                    ON p.id = pv.product_id
+
                 WHERE f.snapshot_date BETWEEN :from AND :to
                 """
                 + filters
                 + """
-                
                 GROUP BY
                     f.snapshot_date,
                     c.status
@@ -144,7 +165,6 @@ public class InventoryHistoryService {
                     f.snapshot_date ASC
                 """;
 
-        // 6. Mapear los resultados.
         return jdbc.query(
                 sql,
                 params,
@@ -164,15 +184,6 @@ public class InventoryHistoryService {
         );
     }
 
-    /**
-     * Indicadores históricos agrupados por fecha.
-     *
-     * inventoryValue utiliza el costo capturado
-     * en cada fotografía, no el costo actual.
-     *
-     * missingCostCount indica cuántos registros
-     * no tienen costo registrado.
-     */
     public record HistoryRow(
             LocalDate snapshotDate,
             String status,
